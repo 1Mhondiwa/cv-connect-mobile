@@ -1,75 +1,66 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+interface DashboardData {
+  profile_completion: number;
+  total_applications: number;
+  pending_applications: number;
+  accepted_applications: number;
+  rejected_applications: number;
+  total_conversations: number;
+  unread_messages: number;
+  recent_jobs_matching: number;
+}
 
-export default function HomeScreen() {
+export default function FreelancerDashboard() {
+  const router = useRouter();
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      const token = await AsyncStorage.getItem('jwt_token');
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      fetch('http://10.254.121.136:5000/api/freelancer/dashboard', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) setDashboard(data.dashboard);
+          else Alert.alert('Error', data.message || 'Failed to load dashboard');
+        })
+        .catch(() => Alert.alert('Error', 'Could not connect to server.'))
+        .finally(() => setLoading(false));
+    };
+    fetchDashboard();
+  }, []);
+
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" /></View>;
+  if (!dashboard) return <View style={styles.center}><Text>No dashboard data.</Text></View>;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Dashboard</Text>
+      <Text style={styles.label}>Profile Completion: {dashboard.profile_completion}%</Text>
+      <Text style={styles.label}>Total Applications: {dashboard.total_applications}</Text>
+      <Text style={styles.label}>Pending Applications: {dashboard.pending_applications}</Text>
+      <Text style={styles.label}>Accepted Applications: {dashboard.accepted_applications}</Text>
+      <Text style={styles.label}>Rejected Applications: {dashboard.rejected_applications}</Text>
+      <Text style={styles.label}>Total Conversations: {dashboard.total_conversations}</Text>
+      <Text style={styles.label}>Unread Messages: {dashboard.unread_messages}</Text>
+      <Text style={styles.label}>Recent Jobs Matching: {dashboard.recent_jobs_matching}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, padding: 24, backgroundColor: '#fff' },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 16, color: '#462918' },
+  label: { fontSize: 18, marginBottom: 8, color: '#444' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
 });
