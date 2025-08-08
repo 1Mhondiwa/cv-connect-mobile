@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,16 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { messageAPI } from '../../services/api';
+import { messageAPI, associateAPI } from '../../services/api';
+import { fetchAssociateDashboardStats } from '../../store/slices/associateSlice';
 
 const FreelancerDetailScreen = ({ route, navigation }) => {
   const { freelancer } = route.params;
+  const dispatch = useDispatch();
+  const [isSaved, setIsSaved] = useState(false);
+  const [isCheckingSaved, setIsCheckingSaved] = useState(true);
 
   const handleMessageFreelancer = async () => {
     try {
@@ -32,8 +37,44 @@ const FreelancerDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSaveProfile = () => {
-    Alert.alert('Profile Saved', `${freelancer.first_name} ${freelancer.last_name}'s profile has been saved!`);
+  // Check if profile is already saved when component mounts
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      try {
+        setIsCheckingSaved(true);
+        const response = await associateAPI.checkIfSaved(freelancer.freelancer_id);
+        setIsSaved(response.data.is_saved);
+      } catch (error) {
+        console.error('Error checking if profile is saved:', error);
+        setIsSaved(false);
+      } finally {
+        setIsCheckingSaved(false);
+      }
+    };
+    
+    checkIfSaved();
+  }, [freelancer.freelancer_id]);
+
+  const handleSaveProfile = async () => {
+    try {
+      if (isSaved) {
+        // Remove from saved
+        await associateAPI.removeSaved(freelancer.freelancer_id);
+        setIsSaved(false);
+        Alert.alert('Profile Removed', `${freelancer.first_name} ${freelancer.last_name}'s profile has been removed from saved!`);
+      } else {
+        // Save profile
+        await associateAPI.saveProfile(freelancer.freelancer_id);
+        setIsSaved(true);
+        Alert.alert('Profile Saved', `${freelancer.first_name} ${freelancer.last_name}'s profile has been saved!`);
+      }
+      
+      // Refresh dashboard stats to update saved profiles count
+      dispatch(fetchAssociateDashboardStats());
+    } catch (error) {
+      console.error('Error saving/removing profile:', error);
+      Alert.alert('Error', 'Failed to save/remove profile. Please try again.');
+    }
   };
 
   const renderSection = (title, icon, children) => (
@@ -97,6 +138,14 @@ const FreelancerDetailScreen = ({ route, navigation }) => {
           </Text>
           <Text style={styles.freelancerEmail}>{freelancer.email}</Text>
           <Text style={styles.freelancerPhone}>{freelancer.phone || 'Phone not provided'}</Text>
+          
+          {/* Availability Status */}
+          <View style={styles.availabilityContainer}>
+                          <View style={[styles.availabilityDot, freelancer.availability_status === 'available' ? styles.availableDot : styles.unavailableDot]} />
+              <Text style={[styles.availabilityText, freelancer.availability_status === 'available' ? styles.availableText : styles.unavailableText]}>
+                {freelancer.availability_status === 'available' ? 'Available for Work' : 'Not Available for Work'}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -144,9 +193,19 @@ const FreelancerDetailScreen = ({ route, navigation }) => {
           <Text style={styles.messageButtonText}>Send Message</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-          <MaterialCommunityIcons name="bookmark-outline" size={20} color="#FF6B35" />
-          <Text style={styles.saveButtonText}>Save Profile</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, isSaved && styles.savedButton]} 
+          onPress={handleSaveProfile}
+          disabled={isCheckingSaved}
+        >
+          <MaterialCommunityIcons 
+            name={isSaved ? "bookmark" : "bookmark-outline"} 
+            size={20} 
+            color={isSaved ? "#FFFFFF" : "#FF6B35"} 
+          />
+          <Text style={[styles.saveButtonText, isSaved && styles.savedButtonText]}>
+            {isCheckingSaved ? 'Checking...' : isSaved ? 'Saved' : 'Save Profile'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -343,6 +402,41 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
     fontSize: 16,
     fontWeight: '600',
+  },
+  savedButton: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  savedButtonText: {
+    color: '#FFFFFF',
+  },
+  // Availability styles
+  availabilityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  availabilityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  availableDot: {
+    backgroundColor: '#10B981',
+  },
+  unavailableDot: {
+    backgroundColor: '#EF4444',
+  },
+  availabilityText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  availableText: {
+    color: '#10B981',
+  },
+  unavailableText: {
+    color: '#EF4444',
   },
 });
 

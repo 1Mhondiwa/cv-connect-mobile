@@ -35,10 +35,41 @@ export const updateProfile = createAsyncThunk(
   'freelancer/updateProfile',
   async (profileData, { rejectWithValue }) => {
     try {
+      console.log('updateProfile thunk: Sending data:', profileData);
       const response = await profileAPI.updateProfile(profileData);
+      console.log('updateProfile thunk: Response received:', response.data);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+      // Preserve the full error object for debugging
+      console.error('updateProfile thunk error:', error);
+      console.error('updateProfile error.response:', error.response);
+      console.error('updateProfile error.response.data:', error.response?.data);
+      
+      // Return only serializable error data
+      return rejectWithValue({
+        message: error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to update profile',
+        responseData: error.response?.data,
+        status: error.response?.status
+      });
+    }
+  }
+);
+
+export const updateAvailability = createAsyncThunk(
+  'freelancer/updateAvailability',
+  async (availabilityStatus, { rejectWithValue }) => {
+    try {
+      console.log('updateAvailability thunk: Sending availability:', availabilityStatus);
+      const response = await profileAPI.updateAvailability(availabilityStatus);
+      console.log('updateAvailability thunk: Response received:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('updateAvailability thunk error:', error);
+      return rejectWithValue({
+        message: error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to update availability',
+        responseData: error.response?.data,
+        status: error.response?.status
+      });
     }
   }
 );
@@ -194,6 +225,20 @@ const freelancerSlice = createSlice({
         state.error = null;
       })
       .addCase(updateProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Update Availability
+      .addCase(updateAvailability.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateAvailability.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.profile = { ...state.profile, availability: action.payload.availability };
+        state.error = null;
+      })
+      .addCase(updateAvailability.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })

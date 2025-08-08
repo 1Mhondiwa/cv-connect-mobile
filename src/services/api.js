@@ -2,14 +2,19 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Create axios instance
-const API_BASE_URL = 'http://10.254.29.174:5000/api'; // Your computer's IP address
+const API_BASE_URL = 'http://192.168.101.164:5000/api'; // Your computer's IP address
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout
   headers: {
     'Content-Type': 'application/json',
   },
+  // Retry configuration
+  retry: 3,
+  retryDelay: (retryCount) => {
+    return retryCount * 1000; // time interval between retries
+  }
 });
 
 // Request interceptor to add auth token
@@ -30,11 +35,82 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      await SecureStore.deleteItemAsync('authToken');
-      // You might want to redirect to login here
+    const originalRequest = error.config;
+
+    // Network error
+    if (!error.response) {
+      console.error('Network Error:', error.message);
+      return Promise.reject({
+        ...error,
+        message: 'Network error. Please check your internet connection.'
+      });
     }
+
+    // Handle 401 Unauthorized
+    if (error.response.status === 401) {
+      console.log('Unauthorized access, removing token');
+      await SecureStore.deleteItemAsync('authToken');
+      // Let the component handle the redirect
+      return Promise.reject({
+        ...error,
+        message: 'Session expired. Please login again.'
+      });
+    }
+
+    // Handle 403 Forbidden
+    if (error.response.status === 403) {
+      return Promise.reject({
+        ...error,
+        message: 'You do not have permission to perform this action.'
+      });
+    }
+
+    // Handle 404 Not Found
+    if (error.response.status === 404) {
+      return Promise.reject({
+        ...error,
+        message: 'The requested resource was not found.'
+      });
+    }
+
+    // Handle 422 Validation Error
+    if (error.response.status === 422) {
+      return Promise.reject({
+        ...error,
+        message: error.response.data.message || 'Validation failed. Please check your input.'
+      });
+    }
+
+    // Handle 429 Too Many Requests
+    if (error.response.status === 429) {
+      return Promise.reject({
+        ...error,
+        message: 'Too many requests. Please try again later.'
+      });
+    }
+
+    // Handle 500 Internal Server Error
+    if (error.response.status >= 500) {
+      return Promise.reject({
+        ...error,
+        message: 'Server error. Please try again later.'
+      });
+    }
+
+    // Retry the request if we haven't reached max retries
+    if (originalRequest.retry === undefined) {
+      originalRequest.retry = 0;
+    }
+
+    if (originalRequest.retry < api.defaults.retry) {
+      originalRequest.retry += 1;
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve(api(originalRequest));
+        }, api.defaults.retryDelay(originalRequest.retry));
+      });
+    }
+
     return Promise.reject(error);
   }
 );
@@ -48,12 +124,14 @@ export const authAPI = {
   resetPassword: (data) => api.post('/auth/reset-password', data),
   verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
   createAdmin: (adminData) => api.post('/auth/create-admin', adminData),
+  submitAssociateRequest: (requestData) => api.post('/associate-request/submit', requestData),
 };
 
 // Profile API
 export const profileAPI = {
   getProfile: () => api.get('/freelancer/profile'),
   updateProfile: (profileData) => api.put('/freelancer/profile', profileData),
+  updateAvailability: (availabilityStatus) => api.put('/freelancer/availability', { availability_status: availabilityStatus }),
   uploadCV: (formData) => api.post('/freelancer/cv/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -112,6 +190,11 @@ export const associateAPI = {
   getProfile: () => api.get('/associate/profile'),
   updateProfile: (profileData) => api.put('/associate/profile', profileData),
   getDashboard: () => api.get('/associate/dashboard'),
+  getDashboardStats: () => api.get('/associate/dashboard-stats'),
+  getSavedProfiles: () => api.get('/associate/saved-profiles'),
+  checkIfSaved: (freelancerId) => api.get(`/associate/check-saved/${freelancerId}`),
+  saveProfile: (freelancerId) => api.post('/associate/save-profile', { freelancer_id: freelancerId }),
+  removeSaved: (freelancerId) => api.delete(`/associate/remove-saved/${freelancerId}`),
 };
 
 // Token management

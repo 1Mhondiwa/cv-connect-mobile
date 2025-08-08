@@ -104,7 +104,7 @@ import {
       console.log('Stored filename:', profile.cv.stored_filename);
       
       // Construct the full URL to the CV file
-      const cvUrl = `http://10.254.29.174:5000/uploads/cvs/${profile.cv.stored_filename}`;
+              const cvUrl = `http://192.168.101.122:5000/uploads/cvs/${profile.cv.stored_filename}`;
       console.log('Opening CV URL:', cvUrl);
       
       // Show debug info

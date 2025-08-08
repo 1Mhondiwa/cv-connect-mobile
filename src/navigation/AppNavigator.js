@@ -14,6 +14,7 @@ const Stack = createStackNavigator();
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import AdminCreateScreen from '../screens/auth/AdminCreateScreen';
+import AssociateRequestScreen from '../screens/associate/AssociateRequestScreen';
 
 // Freelancer Screens
 import CVUploadScreen from '../screens/freelancer/CVUploadScreen';
@@ -38,6 +39,7 @@ const AuthNavigator = () => (
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
     <Stack.Screen name="AdminCreate" component={AdminCreateScreen} />
+    <Stack.Screen name="AssociateRequest" component={AssociateRequestScreen} />
   </Stack.Navigator>
 );
 

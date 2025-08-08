@@ -197,7 +197,16 @@ const messageSlice = createSlice({
         }
         state.messages[conversationId].push(message);
         // Update conversation's last message
-        this.updateConversationLastMessage(state, { conversationId, message });
+        const conversation = state.conversations.find(c => c.conversation_id === conversationId);
+        if (conversation) {
+          conversation.last_message = message.content;
+          conversation.last_message_time = message.sent_at;
+          // Move conversation to top
+          state.conversations = [
+            conversation,
+            ...state.conversations.filter(c => c.conversation_id !== conversationId)
+          ];
+        }
       })
       // Create Conversation
       .addCase(createConversation.fulfilled, (state, action) => {

@@ -21,6 +21,7 @@ const AssociateSearchScreen = ({ navigation }) => {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [availabilityFilter, setAvailabilityFilter] = useState('all'); // 'all', 'available', 'unavailable'
 
   useEffect(() => {
     loadFreelancers();
@@ -52,8 +53,13 @@ const AssociateSearchScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  // Use freelancers directly since search API handles filtering
-  const filteredFreelancers = freelancers;
+  // Filter freelancers by availability status
+  const filteredFreelancers = freelancers.filter(freelancer => {
+    if (availabilityFilter === 'all') return true;
+    if (availabilityFilter === 'available') return freelancer.availability_status === 'available';
+    if (availabilityFilter === 'unavailable') return freelancer.availability_status !== 'available';
+    return true;
+  });
 
   const handleViewProfile = (freelancer) => {
     navigation.navigate('FreelancerDetail', { freelancer });
@@ -110,8 +116,10 @@ const AssociateSearchScreen = ({ navigation }) => {
             </View>
           </View>
           <View style={styles.statusIndicator}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.statusText}>Available</Text>
+                          <View style={[styles.statusDot, freelancer.availability_status === 'available' ? styles.availableDot : styles.unavailableDot]} />
+              <Text style={[styles.statusText, freelancer.availability_status === 'available' ? styles.availableText : styles.unavailableText]}>
+                {freelancer.availability_status === 'available' ? 'Available' : 'Not Available'}
+            </Text>
           </View>
         </View>
 
@@ -125,9 +133,12 @@ const AssociateSearchScreen = ({ navigation }) => {
                 </View>
               ))}
                              {skillNames.length > 3 && (
-                 <View style={styles.moreSkillsTag}>
+                 <TouchableOpacity 
+                   style={styles.moreSkillsTag}
+                   onPress={() => handleViewProfile(freelancer)}
+                 >
                    <Text style={styles.moreSkillsText}>+{skillNames.length - 3} more</Text>
-                 </View>
+                 </TouchableOpacity>
                )}
             </View>
           </View>
@@ -220,6 +231,58 @@ const AssociateSearchScreen = ({ navigation }) => {
               ))}
             </View>
           </ScrollView>
+          
+          <Text style={styles.filterTitle}>Filter by Availability</Text>
+          <View style={styles.availabilityFilterList}>
+            <TouchableOpacity
+              style={[
+                styles.availabilityFilterTag,
+                availabilityFilter === 'all' && styles.selectedAvailabilityTag
+              ]}
+              onPress={() => setAvailabilityFilter('all')}
+            >
+              <Text style={[
+                styles.availabilityFilterText,
+                availabilityFilter === 'all' && styles.selectedAvailabilityFilterText
+              ]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.availabilityFilterTag,
+                availabilityFilter === 'available' && styles.selectedAvailabilityTag
+              ]}
+              onPress={() => setAvailabilityFilter('available')}
+            >
+              <View style={styles.availabilityFilterContent}>
+                <View style={styles.availableDot} />
+                <Text style={[
+                  styles.availabilityFilterText,
+                  availabilityFilter === 'available' && styles.selectedAvailabilityFilterText
+                ]}>
+                  Available
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.availabilityFilterTag,
+                availabilityFilter === 'unavailable' && styles.selectedAvailabilityTag
+              ]}
+              onPress={() => setAvailabilityFilter('unavailable')}
+            >
+              <View style={styles.availabilityFilterContent}>
+                <View style={styles.unavailableDot} />
+                <Text style={[
+                  styles.availabilityFilterText,
+                  availabilityFilter === 'unavailable' && styles.selectedAvailabilityFilterText
+                ]}>
+                  Not Available
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -408,17 +471,27 @@ const styles = StyleSheet.create({
   statusIndicator: {
     alignItems: 'center',
   },
-  onlineDot: {
+  statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
     marginBottom: 4,
+  },
+  availableDot: {
+    backgroundColor: '#10B981',
+  },
+  unavailableDot: {
+    backgroundColor: '#EF4444',
   },
   statusText: {
     fontSize: 10,
-    color: '#10B981',
     fontWeight: '500',
+  },
+  availableText: {
+    color: '#10B981',
+  },
+  unavailableText: {
+    color: '#EF4444',
   },
   skillsSection: {
     marginBottom: 12,
@@ -505,6 +578,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     marginTop: 12,
+  },
+  // Availability filter styles
+  availabilityFilterList: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  availabilityFilterTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  selectedAvailabilityTag: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  availabilityFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  availabilityFilterText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  selectedAvailabilityFilterText: {
+    color: '#FFFFFF',
   },
 });
 

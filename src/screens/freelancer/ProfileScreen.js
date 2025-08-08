@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, Linking } from 'react-native';
-import { Text, Card, Button, IconButton, Surface, useTheme, Avatar, TextInput, Divider, Chip } from 'react-native-paper';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, ToastAndroid } from 'react-native';
+import { Text, Card, Button, IconButton, Surface, useTheme, Avatar, Divider, Chip } from 'react-native-paper';
 import { useSelector, useDispatch } from 'react-redux';
 import * as ImagePicker from 'expo-image-picker';
-import { updateProfile, getProfile } from '../../store/slices/freelancerSlice';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { updateProfile, getProfile, updateAvailability } from '../../store/slices/freelancerSlice';
 import { profileAPI } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 const ProfileScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -14,6 +17,7 @@ const ProfileScreen = ({ navigation }) => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = React.useRef(null);
   
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -23,7 +27,8 @@ const ProfileScreen = ({ navigation }) => {
     phone: '',
     linkedin_url: '',
     github_url: '',
-    summary: ''
+    summary: '',
+          availability_status: 'available'
   });
 
   // Skills management
@@ -56,17 +61,42 @@ const ProfileScreen = ({ navigation }) => {
     value: ''
   });
 
+  // Load profile data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('ProfileScreen: Loading profile data...');
+      dispatch(getProfile());
+    }, [dispatch])
+  );
+
   // Initialize form data when profile loads
   React.useEffect(() => {
+    console.log('ProfileScreen: useEffect triggered - Profile data changed:', profile);
+    console.log('ProfileScreen: useEffect - profile.availability_status:', profile?.availability_status);
     if (profile) {
-      setFormData({
-        first_name: profile.first_name || user?.first_name || '',
-        last_name: profile.last_name || user?.last_name || '',
-        headline: profile.headline || '',
-        phone: profile.phone || '',
-        linkedin_url: profile.linkedin_url || '',
-        github_url: profile.github_url || '',
-        summary: profile.summary || ''
+      // Only initialize form data if it hasn't been set yet (first load)
+      setFormData(prevFormData => {
+        console.log('ProfileScreen: useEffect - prevFormData:', prevFormData);
+        // If formData is already initialized (has values), don't reset it
+        if (prevFormData.first_name !== '' || prevFormData.last_name !== '') {
+          console.log('ProfileScreen: Form already initialized, preserving current values');
+          console.log('ProfileScreen: Current availability_status in form:', prevFormData.availability_status);
+          return prevFormData;
+        }
+        
+        console.log('ProfileScreen: Initializing form data from profile');
+        const newFormData = {
+          first_name: profile.first_name || user?.first_name || '',
+          last_name: profile.last_name || user?.last_name || '',
+          headline: profile.headline || '',
+          phone: profile.phone || '',
+          linkedin_url: profile.linkedin_url || '',
+          github_url: profile.github_url || '',
+          summary: profile.summary || '',
+          availability_status: profile.availability_status !== undefined ? profile.availability_status : 'available'
+        };
+        console.log('ProfileScreen: New formData being set:', newFormData);
+        return newFormData;
       });
 
       // Initialize skills from CV-extracted skills or existing skills
@@ -97,27 +127,39 @@ const ProfileScreen = ({ navigation }) => {
   }, [profile, user]);
 
   const handleEditToggle = () => {
+    console.log('ProfileScreen: Edit button clicked, current isEditing:', isEditing);
     if (isEditing) {
-      // Cancel editing - reset all form data
-      setFormData({
-        first_name: profile.first_name || user?.first_name || '',
-        last_name: profile.last_name || user?.last_name || '',
-        headline: profile.headline || '',
-        phone: profile.phone || '',
-        linkedin_url: profile.linkedin_url || '',
-        github_url: profile.github_url || '',
-        summary: profile.summary || ''
-      });
-      setSkills(profile.cv_skills || profile.skills || []);
-      setEducation(profile.education || []);
-      setWorkExperience(profile.work_experience || []);
-      setNewSkill('');
-      setNewSkillLevel('Proficient');
-      setNewEducation({ degree: '', institution: '', year: '', description: '' });
-      setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
-      setNewContact({ type: 'phone', value: '' });
+      // Save changes before exiting edit mode
+      console.log('ProfileScreen: Saving changes before exiting edit mode');
+      handleSaveProfile();
     }
     setIsEditing(!isEditing);
+    console.log('ProfileScreen: isEditing set to:', !isEditing);
+  };
+
+  const handleCancelEdit = () => {
+    console.log('ProfileScreen: Cancel edit clicked');
+    // Reset form data to original profile values
+    setFormData({
+      first_name: profile.first_name || user?.first_name || '',
+      last_name: profile.last_name || user?.last_name || '',
+      headline: profile.headline || '',
+      phone: profile.phone || '',
+      linkedin_url: profile.linkedin_url || '',
+      github_url: profile.github_url || '',
+      summary: profile.summary || '',
+      availability_status: profile.availability_status !== undefined ? profile.availability_status : 'available'
+    });
+    setSkills(profile.cv_skills || profile.skills || []);
+    setEducation(profile.education || []);
+    setWorkExperience(profile.work_experience || []);
+    setNewSkill('');
+    setNewSkillLevel('Proficient');
+    setNewEducation({ degree: '', institution: '', year: '', description: '' });
+    setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
+    setNewContact({ type: 'phone', value: '' });
+    setIsEditing(false);
+    console.log('ProfileScreen: Edit mode cancelled');
   };
 
   const handleSaveProfile = async () => {
@@ -175,26 +217,109 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleInputChange = async (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    console.log('ProfileScreen: handleInputChange called with field:', field, 'value:', value, 'type:', typeof value);
     
-    // Auto-save basic profile information after a short delay
-    setTimeout(async () => {
-      try {
-        const updatedFormData = {
-          ...formData,
-          [field]: value
-        };
-        
-        await dispatch(updateProfile(updatedFormData)).unwrap();
-        console.log(`Auto-saved ${field}:`, value);
-      } catch (error) {
-        console.error('Auto-save error:', error);
-        // Don't show error alert for auto-save to avoid being annoying
+    // For availability_status, use the value directly since we're now passing strings
+    let newValue = value;
+    if (field === 'availability_status') {
+      newValue = value; // Use the string value directly
+      console.log('ProfileScreen: Setting availability_status to:', newValue);
+    }
+    
+    setFormData(prev => {
+      console.log('ProfileScreen: Previous formData:', prev);
+      const newFormData = {
+        ...prev,
+        [field]: newValue
+      };
+      console.log('ProfileScreen: New formData:', newFormData);
+      
+      // Clear any existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
-    }, 1000); // 1 second delay
+      
+      // Set new timeout for auto-save
+      saveTimeoutRef.current = setTimeout(async () => {
+        // Don't auto-save if profile isn't loaded yet
+        if (!profile) {
+          console.log('ProfileScreen: Skipping auto-save - profile not loaded yet');
+          return;
+        }
+        
+        console.log('ProfileScreen: Current profile data:', profile);
+        console.log('ProfileScreen: Current formData:', newFormData);
+        
+        try {
+          // If only availability is being changed, use the dedicated endpoint
+          if (field === 'availability_status') {
+            console.log('ProfileScreen: Using availability-only endpoint');
+            const result = await dispatch(updateAvailability(newValue)).unwrap();
+            console.log(`ProfileScreen: Availability updated to:`, newValue, 'Result:', result);
+            return;
+          }
+          
+          // Create a clean data object with only non-empty values and preserve existing values
+          const cleanData = {};
+          Object.keys(newFormData).forEach(key => {
+            if (newFormData[key] !== '' && newFormData[key] !== null && newFormData[key] !== undefined) {
+              cleanData[key] = newFormData[key];
+            } else if (profile && profile[key] !== undefined && profile[key] !== '') {
+              // Preserve existing value if new value is empty
+              cleanData[key] = profile[key];
+            }
+          });
+          
+          // Ensure required fields are always present
+          if (!cleanData.first_name && profile?.first_name) cleanData.first_name = profile.first_name;
+          if (!cleanData.last_name && profile?.last_name) cleanData.last_name = profile.last_name;
+          if (!cleanData.phone && profile?.phone) cleanData.phone = profile.phone;
+          
+          // Debug: Check if phone is missing
+          if (!cleanData.phone) {
+            console.log('ProfileScreen: WARNING - Phone field is missing!');
+            console.log('ProfileScreen: Profile phone:', profile?.phone);
+            console.log('ProfileScreen: FormData phone:', newFormData.phone);
+          }
+          
+          // Skip auto-save if required fields are missing
+          if (!cleanData.phone || !cleanData.first_name || !cleanData.last_name) {
+            console.log('ProfileScreen: Skipping auto-save - required fields missing');
+            console.log('ProfileScreen: Missing fields - phone:', !cleanData.phone, 'first_name:', !cleanData.first_name, 'last_name:', !cleanData.last_name);
+            return;
+          }
+          
+          console.log('ProfileScreen: Auto-saving clean profile data:', cleanData);
+          const result = await dispatch(updateProfile(cleanData)).unwrap();
+          console.log(`ProfileScreen: Auto-saved ${field}:`, value, 'Result:', result);
+        } catch (error) {
+          // Log the entire error object
+          console.error('ProfileScreen: Full error object:', error);
+          
+          // Handle the new error format from the thunk
+          let msg = 'Failed to update profile';
+          if (error && typeof error === 'object') {
+            if (error.message) {
+              msg = error.message;
+            }
+            if (error.responseData) {
+              console.error('ProfileScreen: error.responseData:', error.responseData);
+              if (error.responseData.errors && error.responseData.errors.length > 0) {
+                // Handle validation errors array
+                msg = error.responseData.errors[0].msg;
+              } else if (error.responseData.error) {
+                msg = error.responseData.error;
+              } else if (error.responseData.message) {
+                msg = error.responseData.message;
+              }
+            }
+          }
+          showToast(msg);
+        }
+      }, 1000); // 1 second delay
+      
+      return newFormData;
+    });
   };
 
   // Skills management functions
@@ -566,7 +691,7 @@ const ProfileScreen = ({ navigation }) => {
 
       console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: false,
         quality: 1,
       });
@@ -597,8 +722,8 @@ const ProfileScreen = ({ navigation }) => {
             dispatch(getProfile());
           } else {
             Alert.alert('Error', response.data.message || 'Failed to update profile picture');
-          }
-        } catch (error) {
+      }
+    } catch (error) {
           console.error('Profile picture upload error:', error);
           console.error('Error response:', error.response?.data);
           console.error('Error status:', error.response?.status);
@@ -641,7 +766,7 @@ const ProfileScreen = ({ navigation }) => {
       console.log('Original filename:', profile.cv.original_filename);
       
       // Construct the full URL to the CV file
-      const cvUrl = `http://10.254.29.174:5000/uploads/cvs/${profile.cv.stored_filename}`;
+      const cvUrl = `http://192.168.101.122:5000/uploads/cvs/${profile.cv.stored_filename}`;
       console.log('Opening CV URL:', cvUrl);
       
       // For now, show the URL in an alert so we can see what it's trying to access
@@ -683,7 +808,7 @@ const ProfileScreen = ({ navigation }) => {
       console.log('CV Data for download:', profile.cv);
       
       // Construct the full URL to the CV file
-      const cvUrl = `http://10.254.29.174:5000/uploads/cvs/${profile.cv.stored_filename}`;
+      const cvUrl = `http://192.168.101.122:5000/uploads/cvs/${profile.cv.stored_filename}`;
       console.log('Downloading CV from URL:', cvUrl);
       
       // Show success message (in-app download simulation)
@@ -742,20 +867,20 @@ const ProfileScreen = ({ navigation }) => {
     console.log('ProfileScreen - skills length:', currentSkills?.length);
     
     if (!currentSkills || currentSkills.length === 0) {
-      return (
+    return (
         <View style={styles.emptySection}>
           <Text style={styles.emptyText}>No skills available yet</Text>
-        </View>
-      );
-    }
+      </View>
+    );
+  }
 
-    return (
+  return (
       <View style={styles.skillsList}>
         {currentSkills.map((skill, index) => (
           <View key={index} style={styles.skillItem}>
             <Text style={styles.skillName}>{skill.name}</Text>
             <Text style={styles.skillLevel}>{skill.level || 'Proficient'}</Text>
-          </View>
+      </View>
         ))}
       </View>
     );
@@ -920,7 +1045,7 @@ const ProfileScreen = ({ navigation }) => {
       <Card.Content>
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Education Management
-        </Text>
+                </Text>
         
         {/* Current Education */}
         <View style={styles.currentEducationContainer}>
@@ -939,7 +1064,7 @@ const ProfileScreen = ({ navigation }) => {
                       iconColor="#EF4444"
                       onPress={() => removeEducation(index)}
                     />
-                  </View>
+              </View>
                   <Text style={styles.educationEditInstitution}>{edu.institution}</Text>
                   <Text style={styles.educationEditYear}>{edu.year}</Text>
                   {edu.description && (
@@ -948,8 +1073,8 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               ))}
             </View>
-          )}
-        </View>
+            )}
+          </View>
 
         {/* Add New Education */}
         <View style={styles.addEducationContainer}>
@@ -1020,7 +1145,7 @@ const ProfileScreen = ({ navigation }) => {
        <Card.Content>
          <Text variant="titleMedium" style={styles.sectionTitle}>
            Work Experience Management
-         </Text>
+          </Text>
          
          {/* Current Work Experience */}
          <View style={styles.currentWorkExperienceContainer}>
@@ -1049,13 +1174,13 @@ const ProfileScreen = ({ navigation }) => {
                ))}
              </View>
            )}
-         </View>
+        </View>
 
          {/* Add New Work Experience */}
          <View style={styles.addWorkExperienceContainer}>
            <Text variant="bodyMedium" style={styles.subsectionTitle}>Add New Work Experience:</Text>
            
-           <TextInput
+            <TextInput
              mode="outlined"
              label="Job Title"
              value={newWorkExperience.title}
@@ -1066,7 +1191,7 @@ const ProfileScreen = ({ navigation }) => {
              placeholder="e.g., Software Developer"
            />
 
-           <TextInput
+            <TextInput
              mode="outlined"
              label="Company"
              value={newWorkExperience.company}
@@ -1078,7 +1203,7 @@ const ProfileScreen = ({ navigation }) => {
            />
 
            <View style={styles.dateRow}>
-             <TextInput
+            <TextInput
                mode="outlined"
                label="Start Date"
                value={newWorkExperience.start_date}
@@ -1097,10 +1222,10 @@ const ProfileScreen = ({ navigation }) => {
                outlineColor="#E0E0E0"
                activeOutlineColor="#FF6B35"
                placeholder="e.g., Dec 2023 (or leave empty for current)"
-             />
-           </View>
+            />
+          </View>
 
-           <TextInput
+            <TextInput
              mode="outlined"
              label="Description (Optional)"
              value={newWorkExperience.description}
@@ -1122,7 +1247,7 @@ const ProfileScreen = ({ navigation }) => {
            >
              Add Work Experience
            </Button>
-         </View>
+          </View>
        </Card.Content>
      </Card>
    );
@@ -1167,7 +1292,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <TextInput
+            <TextInput
             mode="outlined"
             label={`${newContact.type.charAt(0).toUpperCase() + newContact.type.slice(1)} ${newContact.type === 'phone' ? 'Number' : 'URL'}`}
             value={newContact.value}
@@ -1194,7 +1319,7 @@ const ProfileScreen = ({ navigation }) => {
           >
             Add Contact
           </Button>
-        </View>
+          </View>
       </Card.Content>
     </Card>
   );
@@ -1207,7 +1332,7 @@ const ProfileScreen = ({ navigation }) => {
         </Text>
         
         <View style={styles.formRow}>
-          <TextInput
+            <TextInput
             mode="outlined"
             label="First Name"
             value={formData.first_name}
@@ -1224,10 +1349,10 @@ const ProfileScreen = ({ navigation }) => {
             style={styles.formInput}
             outlineColor="#E0E0E0"
             activeOutlineColor="#FF6B35"
-          />
-        </View>
+            />
+          </View>
 
-        <TextInput
+            <TextInput
           mode="outlined"
           label="Professional Headline"
           value={formData.headline}
@@ -1240,7 +1365,7 @@ const ProfileScreen = ({ navigation }) => {
 
         
 
-        <TextInput
+            <TextInput
           mode="outlined"
           label="Professional Summary"
           value={formData.summary}
@@ -1248,10 +1373,65 @@ const ProfileScreen = ({ navigation }) => {
           style={[styles.formInput, styles.textArea]}
           outlineColor="#E0E0E0"
           activeOutlineColor="#FF6B35"
-          multiline
-          numberOfLines={4}
+              multiline
+              numberOfLines={4}
           placeholder="Write a brief professional summary..."
         />
+
+        <View style={styles.availabilityContainer}>
+          <Text variant="bodyMedium" style={styles.availabilityLabel}>
+            Availability Status
+          </Text>
+          <Text style={styles.availabilityDebug}>
+            Current status: {formData.availability_status === 'available' ? 'Available' : 'Not Available'}
+          </Text>
+          <View style={styles.availabilityToggle}>
+            <TouchableOpacity
+              style={[
+                styles.availabilityButton,
+                formData.availability_status === 'available' && styles.availableButton
+              ]}
+              onPress={() => {
+                console.log('ProfileScreen: Setting availability to available');
+                handleInputChange('availability_status', 'available');
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="check-circle" 
+                size={20} 
+                color={formData.availability_status === 'available' ? '#FFFFFF' : '#666666'} 
+              />
+              <Text style={[
+                styles.availabilityText,
+                formData.availability_status === 'available' && styles.availableText
+              ]}>
+                Available for Work
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.availabilityButton,
+                formData.availability_status !== 'available' && styles.unavailableButton
+              ]}
+              onPress={() => {
+                console.log('ProfileScreen: Setting availability to unavailable');
+                handleInputChange('availability_status', 'unavailable');
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="close-circle" 
+                size={20} 
+                color={formData.availability_status !== 'available' ? '#FFFFFF' : '#666666'} 
+              />
+              <Text style={[
+                styles.availabilityText,
+                formData.availability_status !== 'available' && styles.unavailableText
+              ]}>
+                Not Available
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Card.Content>
     </Card>
   );
@@ -1265,7 +1445,7 @@ const ProfileScreen = ({ navigation }) => {
             {profile?.profile_picture_url ? (
               <Avatar.Image
                 size={80}
-                source={{ uri: `http://10.254.29.174:5000${profile.profile_picture_url}` }}
+                source={{ uri: `http://192.168.101.122:5000${profile.profile_picture_url}` }}
                 style={styles.profileImage}
               />
             ) : (
@@ -1278,7 +1458,7 @@ const ProfileScreen = ({ navigation }) => {
             {uploadingImage && (
               <View style={styles.uploadingOverlay}>
                 <Text style={styles.uploadingText}>Uploading...</Text>
-              </View>
+          </View>
             )}
             <Text style={styles.uploadHint}>Tap to upload</Text>
           </TouchableOpacity>
@@ -1293,19 +1473,29 @@ const ProfileScreen = ({ navigation }) => {
             <Text variant="bodySmall" style={styles.emailText}>
               {profile?.email || user?.email}
             </Text>
-          </View>
+        </View>
 
           {/* Edit Button */}
-          <IconButton
-            icon={isEditing ? "close" : "pencil"}
-            size={24}
-            iconColor={isEditing ? "#EF4444" : "#FF6B35"}
-            onPress={handleEditToggle}
-            style={styles.editButton}
-            disabled={isSaving}
-          />
+          <View style={styles.editButtonContainer}>
+            <TouchableOpacity
+              onPress={handleEditToggle}
+              disabled={isSaving}
+              style={styles.editButtonTouchable}
+            >
+              <MaterialCommunityIcons
+                name={isEditing ? "close" : "pencil"}
+                size={20}
+                color={isEditing ? "#EF4444" : "#FF6B35"}
+              />
+              <Text style={styles.editButtonText}>
+                {isEditing ? "Cancel" : "Edit"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Surface>
+      
+
 
       {/* Edit Forms - Show when editing */}
       {isEditing && (
@@ -1316,7 +1506,7 @@ const ProfileScreen = ({ navigation }) => {
            {renderEditWorkExperience()}
            {renderEditContact()}
           
-                     {/* Done Button */}
+                     {/* Save/Cancel Buttons */}
            <Card style={styles.sectionCard} elevation={2}>
              <Card.Content>
                <View style={styles.editButtonsContainer}>
@@ -1326,8 +1516,19 @@ const ProfileScreen = ({ navigation }) => {
                    style={styles.doneButton}
                    contentStyle={styles.editButtonContent}
                    icon="check"
+                   disabled={isSaving}
                  >
-                   Done Editing
+                   {isSaving ? 'Saving...' : 'Save Changes'}
+                 </Button>
+                 <Button
+                   mode="outlined"
+                   onPress={handleCancelEdit}
+                   style={styles.cancelButton}
+                   contentStyle={styles.editButtonContent}
+                   icon="close"
+                   disabled={isSaving}
+                 >
+                   Cancel
                  </Button>
                </View>
              </Card.Content>
@@ -1360,7 +1561,7 @@ const ProfileScreen = ({ navigation }) => {
               <View style={styles.contactItem}>
                 <IconButton icon="phone" size={20} iconColor="#8B4513" />
                 <Text style={styles.contactText}>{profile.phone}</Text>
-              </View>
+      </View>
             )}
             {profile?.email && (
               <View style={styles.contactItem}>
@@ -1495,6 +1696,25 @@ const styles = StyleSheet.create({
   },
   editButton: {
     marginLeft: 'auto',
+  },
+  editButtonContainer: {
+    marginLeft: 'auto',
+  },
+  editButtonTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FF6B35',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    gap: 4,
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   welcomeText: {
     fontWeight: 'bold',
@@ -1675,6 +1895,11 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     backgroundColor: '#FF6B35',
+    flex: 1,
+  },
+  cancelButton: {
+    borderColor: '#EF4444',
+    flex: 1,
   },
   editButtonContent: {
     height: 48,
@@ -1785,7 +2010,7 @@ const styles = StyleSheet.create({
      gap: 12,
    },
    workExperienceEditItem: {
-     paddingVertical: 12,
+    paddingVertical: 12,
      paddingHorizontal: 16,
      backgroundColor: '#F8F9FA',
      borderRadius: 8,
@@ -1822,12 +2047,12 @@ const styles = StyleSheet.create({
      marginTop: 16,
    },
    dateRow: {
-     flexDirection: 'row',
+    flexDirection: 'row',
      gap: 12,
      marginBottom: 16,
-   },
+  },
    dateInput: {
-     flex: 1,
+    flex: 1,
    },
   // Contact management styles
   contactNote: {
@@ -1850,7 +2075,58 @@ const styles = StyleSheet.create({
   contactTypeButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  // Availability toggle styles
+  availabilityContainer: {
+    marginTop: 16,
+  },
+  availabilityLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  availabilityDebug: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  availabilityToggle: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  availabilityButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F8F8',
     gap: 8,
+  },
+  availableButton: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  unavailableButton: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  availabilityText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  availableText: {
+    color: '#FFFFFF',
+  },
+  unavailableText: {
+    color: '#FFFFFF',
   },
   contactTypeChip: {
     borderColor: '#E0E0E0',

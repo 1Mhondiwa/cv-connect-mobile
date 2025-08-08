@@ -37,9 +37,9 @@ const AssociateMessagesScreen = ({ navigation }) => {
 
   const handleConversationPress = (conversation) => {
     navigation.navigate('Chat', {
-      conversationId: conversation.id,
-      freelancerName: conversation.freelancer_name,
-      freelancerId: conversation.freelancer_id,
+      conversationId: conversation.conversation_id,
+      recipientName: conversation.freelancer_name,
+      recipientId: conversation.freelancer_id,
     });
   };
 
@@ -66,7 +66,6 @@ const AssociateMessagesScreen = ({ navigation }) => {
     
     return (
       <TouchableOpacity
-        key={conversation.id}
         style={[styles.conversationItem, hasUnread && styles.unreadConversation]}
         onPress={() => handleConversationPress(conversation)}
       >
@@ -115,7 +114,11 @@ const AssociateMessagesScreen = ({ navigation }) => {
         }
       >
         {conversations.length > 0 ? (
-          conversations.map(conversation => renderConversationItem(conversation))
+          conversations.map(conversation => (
+            <View key={conversation.conversation_id || conversation.id}>
+              {renderConversationItem(conversation)}
+            </View>
+          ))
         ) : (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="message-text-outline" size={48} color="#CCCCCC" />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,23 +7,47 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { fetchAssociateProfile, updateAssociateProfile } from '../../store/slices/associateSlice';
 
 const AssociateProfileScreen = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { profile, isLoading } = useSelector((state) => state.associate);
   
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    contact_person: user?.contact_person || '',
-    industry: user?.industry || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    website: user?.website || '',
+    contact_person: '',
+    industry: '',
+    phone: '',
+    address: '',
+    website: '',
   });
+
+  // Load profile data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(fetchAssociateProfile());
+    }, [dispatch])
+  );
+
+  // Update local state when profile data is loaded
+  useEffect(() => {
+    if (profile) {
+      setProfileData({
+        contact_person: profile.contact_person || '',
+        industry: profile.industry || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        website: profile.website || '',
+      });
+    }
+  }, [profile]);
 
   const handleProfileImageUpload = async () => {
     try {
@@ -36,7 +60,7 @@ const AssociateProfileScreen = () => {
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -53,22 +77,24 @@ const AssociateProfileScreen = () => {
 
   const handleSaveProfile = async () => {
     try {
-      // TODO: Implement profile update API call
+      await dispatch(updateAssociateProfile(profileData)).unwrap();
       Alert.alert('Success', 'Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert('Error', error.message || 'Failed to update profile');
     }
   };
 
   const handleCancelEdit = () => {
-    setProfileData({
-      contact_person: user?.contact_person || '',
-      industry: user?.industry || '',
-      phone: user?.phone || '',
-      address: user?.address || '',
-      website: user?.website || '',
-    });
+    if (profile) {
+      setProfileData({
+        contact_person: profile.contact_person || '',
+        industry: profile.industry || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        website: profile.website || '',
+      });
+    }
     setIsEditing(false);
   };
 
@@ -105,6 +131,15 @@ const AssociateProfileScreen = () => {
       )}
     </View>
   );
+
+  if (isLoading && !profile) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -254,6 +289,8 @@ const styles = StyleSheet.create({
   profileImageContainer: {
     alignItems: 'center',
     position: 'relative',
+    width: 80,
+    height: 80,
   },
   profileImage: {
     marginBottom: 16,
@@ -362,6 +399,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666666',
+    marginTop: 12,
   },
 });
 

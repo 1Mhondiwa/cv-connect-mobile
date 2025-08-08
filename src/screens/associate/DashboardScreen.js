@@ -6,14 +6,26 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { logout } from '../../store/slices/authSlice';
+import { fetchAssociateDashboardStats } from '../../store/slices/associateSlice';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const AssociateDashboardScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { dashboardStats, isLoading } = useSelector((state) => state.associate);
+
+  // Load dashboard stats when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(fetchAssociateDashboardStats());
+    }, [dispatch])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -26,28 +38,32 @@ const AssociateDashboardScreen = ({ navigation }) => {
     );
   };
 
+  const handleRefresh = () => {
+    dispatch(fetchAssociateDashboardStats());
+  };
+
   const statsData = [
     { 
       title: 'Total Freelancers', 
-      value: '156', 
+      value: (dashboardStats?.total_freelancers || 0).toString(), 
       color: '#8B4513',
       icon: 'account-group'
     },
     { 
-      title: 'Active Projects', 
-      value: '12', 
+      title: 'Conversations', 
+      value: (dashboardStats?.total_conversations || 0).toString(), 
       color: '#FF8C00',
-      icon: 'briefcase'
-    },
-    { 
-      title: 'Messages', 
-      value: '23', 
-      color: '#10B981',
       icon: 'message-text'
     },
     { 
+      title: 'Unread Messages', 
+      value: (dashboardStats?.unread_messages || 0).toString(), 
+      color: '#10B981',
+      icon: 'message-badge'
+    },
+    { 
       title: 'Saved Profiles', 
-      value: '8', 
+      value: (dashboardStats?.saved_profiles || 0).toString(), 
       color: '#1976D2',
       icon: 'bookmark'
     },
@@ -69,7 +85,7 @@ const AssociateDashboardScreen = ({ navigation }) => {
     { 
       title: 'Saved Profiles', 
       icon: 'bookmark', 
-      onPress: () => Alert.alert('Coming Soon', 'Saved profiles feature will be available soon!'),
+      onPress: () => navigation.navigate('Saved'),
       description: 'View saved freelancer profiles'
     },
     { 
@@ -81,7 +97,12 @@ const AssociateDashboardScreen = ({ navigation }) => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -132,27 +153,39 @@ const AssociateDashboardScreen = ({ navigation }) => {
       <View style={styles.activityContainer}>
         <Text style={styles.sectionTitle}>Recent Activity</Text>
         <View style={styles.activityList}>
-          <View style={styles.activityItem}>
-            <MaterialCommunityIcons name="account-search" size={20} color="#FF6B35" />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>You searched for "React Native developers"</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#FF6B35" />
+              <Text style={styles.loadingText}>Loading activity...</Text>
             </View>
-          </View>
-          <View style={styles.activityItem}>
-            <MaterialCommunityIcons name="message-text" size={20} color="#10B981" />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>New message from John Doe</Text>
-              <Text style={styles.activityTime}>1 day ago</Text>
+          ) : (dashboardStats?.recent_activity || []).length > 0 ? (
+            (dashboardStats?.recent_activity || []).map((activity, index) => (
+              <View key={index} style={styles.activityItem}>
+                <MaterialCommunityIcons 
+                  name={activity.last_message ? "message-text" : "account-search"} 
+                  size={20} 
+                  color={activity.last_message ? "#10B981" : "#FF6B35"} 
+                />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityText}>
+                    {activity.last_message 
+                      ? `Conversation with ${activity.first_name} ${activity.last_name}`
+                      : `Started conversation with ${activity.first_name} ${activity.last_name}`
+                    }
+                  </Text>
+                  <Text style={styles.activityTime}>
+                    {new Date(activity.last_message_time || activity.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="clock-outline" size={40} color="#CCCCCC" />
+              <Text style={styles.emptyStateText}>No recent activity</Text>
+              <Text style={styles.emptyStateSubtext}>Start conversations with freelancers to see activity here</Text>
             </View>
-          </View>
-          <View style={styles.activityItem}>
-            <MaterialCommunityIcons name="bookmark" size={20} color="#1976D2" />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>You saved Sarah Smith's profile</Text>
-              <Text style={styles.activityTime}>3 days ago</Text>
-            </View>
-          </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -309,6 +342,33 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 12,
     color: '#8B8B8B',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666666',
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  emptyStateSubtext: {
+    fontSize: 12,
+    color: '#999999',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 

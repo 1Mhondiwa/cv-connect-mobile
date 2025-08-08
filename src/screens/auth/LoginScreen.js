@@ -145,6 +145,14 @@ const LoginScreen = ({ navigation }) => {
              </TouchableOpacity>
            </View>
 
+           {/* Associate Request Link */}
+           <View style={styles.registerContainer}>
+             <Text style={styles.registerText}>Want to become an associate? </Text>
+             <TouchableOpacity onPress={() => navigation.navigate('AssociateRequest')}>
+               <Text style={styles.registerLink}>Apply Here</Text>
+             </TouchableOpacity>
+           </View>
+
            
         </View>
       </ScrollView>

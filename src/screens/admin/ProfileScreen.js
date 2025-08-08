@@ -72,7 +72,7 @@ const AdminProfileScreen = () => {
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -322,6 +322,8 @@ const styles = StyleSheet.create({
   profileImageContainer: {
     position: 'relative',
     marginRight: 16,
+    width: 80,
+    height: 80,
   },
   profileImageActions: {
     position: 'absolute',
