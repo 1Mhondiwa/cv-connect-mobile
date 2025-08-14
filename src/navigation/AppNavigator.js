@@ -13,6 +13,9 @@ const Stack = createStackNavigator();
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
 import AdminCreateScreen from '../screens/auth/AdminCreateScreen';
 import AssociateRequestScreen from '../screens/associate/AssociateRequestScreen';
 
@@ -38,6 +41,8 @@ const AuthNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     <Stack.Screen name="AdminCreate" component={AdminCreateScreen} />
     <Stack.Screen name="AssociateRequest" component={AssociateRequestScreen} />
   </Stack.Navigator>
@@ -171,7 +176,10 @@ const AppNavigator = () => {
         <Stack.Screen name="CVUpload" component={CVUploadScreen} />
       )}
       {screenToShow === 'Main' && (
-        <Stack.Screen name="Main" component={FreelancerTabNavigator} />
+        <>
+          <Stack.Screen name="Main" component={FreelancerTabNavigator} />
+          <Stack.Screen name="HiringHistory" component={HiringHistoryScreen} />
+        </>
       )}
       {screenToShow === 'Admin' && (
         <Stack.Screen name="Admin" component={AdminTabNavigator} />

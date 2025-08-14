@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, ToastAndroid } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, ToastAndroid, ActivityIndicator } from 'react-native';
 import { Text, Card, Button, IconButton, Surface, useTheme, Avatar, Divider, Chip } from 'react-native-paper';
 import { useSelector, useDispatch } from 'react-redux';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { updateProfile, getProfile, updateAvailability } from '../../store/slices/freelancerSlice';
+import CountryCodePicker from '../../components/CountryCodePicker';
+import CVViewer from '../../components/CVViewer';
 import { profileAPI } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
@@ -17,6 +20,7 @@ const ProfileScreen = ({ navigation }) => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [cvViewerVisible, setCvViewerVisible] = useState(false);
   const saveTimeoutRef = React.useRef(null);
   
   // Form state for editing
@@ -27,8 +31,7 @@ const ProfileScreen = ({ navigation }) => {
     phone: '',
     linkedin_url: '',
     github_url: '',
-    summary: '',
-          availability_status: 'available'
+    summary: ''
   });
 
   // Skills management
@@ -58,33 +61,27 @@ const ProfileScreen = ({ navigation }) => {
   // Contact information management
   const [newContact, setNewContact] = useState({
     type: 'phone',
-    value: ''
+    value: '',
+    countryCode: '+1'
   });
 
   // Load profile data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log('ProfileScreen: Loading profile data...');
       dispatch(getProfile());
     }, [dispatch])
   );
 
   // Initialize form data when profile loads
   React.useEffect(() => {
-    console.log('ProfileScreen: useEffect triggered - Profile data changed:', profile);
-    console.log('ProfileScreen: useEffect - profile.availability_status:', profile?.availability_status);
     if (profile) {
       // Only initialize form data if it hasn't been set yet (first load)
       setFormData(prevFormData => {
-        console.log('ProfileScreen: useEffect - prevFormData:', prevFormData);
         // If formData is already initialized (has values), don't reset it
         if (prevFormData.first_name !== '' || prevFormData.last_name !== '') {
-          console.log('ProfileScreen: Form already initialized, preserving current values');
-          console.log('ProfileScreen: Current availability_status in form:', prevFormData.availability_status);
           return prevFormData;
         }
         
-        console.log('ProfileScreen: Initializing form data from profile');
         const newFormData = {
           first_name: profile.first_name || user?.first_name || '',
           last_name: profile.last_name || user?.last_name || '',
@@ -92,10 +89,8 @@ const ProfileScreen = ({ navigation }) => {
           phone: profile.phone || '',
           linkedin_url: profile.linkedin_url || '',
           github_url: profile.github_url || '',
-          summary: profile.summary || '',
-          availability_status: profile.availability_status !== undefined ? profile.availability_status : 'available'
+          summary: profile.summary || ''
         };
-        console.log('ProfileScreen: New formData being set:', newFormData);
         return newFormData;
       });
 
@@ -127,18 +122,14 @@ const ProfileScreen = ({ navigation }) => {
   }, [profile, user]);
 
   const handleEditToggle = () => {
-    console.log('ProfileScreen: Edit button clicked, current isEditing:', isEditing);
     if (isEditing) {
       // Save changes before exiting edit mode
-      console.log('ProfileScreen: Saving changes before exiting edit mode');
       handleSaveProfile();
     }
     setIsEditing(!isEditing);
-    console.log('ProfileScreen: isEditing set to:', !isEditing);
   };
 
   const handleCancelEdit = () => {
-    console.log('ProfileScreen: Cancel edit clicked');
     // Reset form data to original profile values
     setFormData({
       first_name: profile.first_name || user?.first_name || '',
@@ -147,8 +138,7 @@ const ProfileScreen = ({ navigation }) => {
       phone: profile.phone || '',
       linkedin_url: profile.linkedin_url || '',
       github_url: profile.github_url || '',
-      summary: profile.summary || '',
-      availability_status: profile.availability_status !== undefined ? profile.availability_status : 'available'
+      summary: profile.summary || ''
     });
     setSkills(profile.cv_skills || profile.skills || []);
     setEducation(profile.education || []);
@@ -159,7 +149,6 @@ const ProfileScreen = ({ navigation }) => {
     setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
     setNewContact({ type: 'phone', value: '' });
     setIsEditing(false);
-    console.log('ProfileScreen: Edit mode cancelled');
   };
 
   const handleSaveProfile = async () => {
@@ -217,22 +206,11 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleInputChange = async (field, value) => {
-    console.log('ProfileScreen: handleInputChange called with field:', field, 'value:', value, 'type:', typeof value);
-    
-    // For availability_status, use the value directly since we're now passing strings
-    let newValue = value;
-    if (field === 'availability_status') {
-      newValue = value; // Use the string value directly
-      console.log('ProfileScreen: Setting availability_status to:', newValue);
-    }
-    
     setFormData(prev => {
-      console.log('ProfileScreen: Previous formData:', prev);
       const newFormData = {
         ...prev,
-        [field]: newValue
+        [field]: value
       };
-      console.log('ProfileScreen: New formData:', newFormData);
       
       // Clear any existing timeout
       if (saveTimeoutRef.current) {
@@ -243,22 +221,10 @@ const ProfileScreen = ({ navigation }) => {
       saveTimeoutRef.current = setTimeout(async () => {
         // Don't auto-save if profile isn't loaded yet
         if (!profile) {
-          console.log('ProfileScreen: Skipping auto-save - profile not loaded yet');
           return;
         }
         
-        console.log('ProfileScreen: Current profile data:', profile);
-        console.log('ProfileScreen: Current formData:', newFormData);
-        
         try {
-          // If only availability is being changed, use the dedicated endpoint
-          if (field === 'availability_status') {
-            console.log('ProfileScreen: Using availability-only endpoint');
-            const result = await dispatch(updateAvailability(newValue)).unwrap();
-            console.log(`ProfileScreen: Availability updated to:`, newValue, 'Result:', result);
-            return;
-          }
-          
           // Create a clean data object with only non-empty values and preserve existing values
           const cleanData = {};
           Object.keys(newFormData).forEach(key => {
@@ -275,27 +241,13 @@ const ProfileScreen = ({ navigation }) => {
           if (!cleanData.last_name && profile?.last_name) cleanData.last_name = profile.last_name;
           if (!cleanData.phone && profile?.phone) cleanData.phone = profile.phone;
           
-          // Debug: Check if phone is missing
-          if (!cleanData.phone) {
-            console.log('ProfileScreen: WARNING - Phone field is missing!');
-            console.log('ProfileScreen: Profile phone:', profile?.phone);
-            console.log('ProfileScreen: FormData phone:', newFormData.phone);
-          }
-          
           // Skip auto-save if required fields are missing
           if (!cleanData.phone || !cleanData.first_name || !cleanData.last_name) {
-            console.log('ProfileScreen: Skipping auto-save - required fields missing');
-            console.log('ProfileScreen: Missing fields - phone:', !cleanData.phone, 'first_name:', !cleanData.first_name, 'last_name:', !cleanData.last_name);
             return;
           }
           
-          console.log('ProfileScreen: Auto-saving clean profile data:', cleanData);
           const result = await dispatch(updateProfile(cleanData)).unwrap();
-          console.log(`ProfileScreen: Auto-saved ${field}:`, value, 'Result:', result);
         } catch (error) {
-          // Log the entire error object
-          console.error('ProfileScreen: Full error object:', error);
-          
           // Handle the new error format from the thunk
           let msg = 'Failed to update profile';
           if (error && typeof error === 'object') {
@@ -303,7 +255,6 @@ const ProfileScreen = ({ navigation }) => {
               msg = error.message;
             }
             if (error.responseData) {
-              console.error('ProfileScreen: error.responseData:', error.responseData);
               if (error.responseData.errors && error.responseData.errors.length > 0) {
                 // Handle validation errors array
                 msg = error.responseData.errors[0].msg;
@@ -359,6 +310,8 @@ const ProfileScreen = ({ navigation }) => {
         setSkills(prev => prev.filter(skill => skill.name !== newSkill.trim()));
         Alert.alert('Error', 'Failed to add skill. Please try again.');
       }
+    } else {
+      Alert.alert('Error', 'Please enter a skill name');
     }
   };
 
@@ -642,18 +595,18 @@ const ProfileScreen = ({ navigation }) => {
       try {
         // Add to formData based on type
         if (newContact.type === 'phone') {
-          setFormData(prev => ({ ...prev, phone: newContact.value.trim() }));
+          setFormData(prev => ({ ...prev, phone: `${newContact.countryCode}${newContact.value.trim()}` }));
         } else if (newContact.type === 'linkedin') {
           setFormData(prev => ({ ...prev, linkedin_url: newContact.value.trim() }));
         } else if (newContact.type === 'github') {
           setFormData(prev => ({ ...prev, github_url: newContact.value.trim() }));
         }
-        setNewContact({ type: 'phone', value: '' });
+        setNewContact({ type: 'phone', value: '', countryCode: '+1' });
         
         // Save to backend immediately
         const profileData = {
           ...formData,
-          [newContact.type === 'phone' ? 'phone' : `${newContact.type}_url`]: newContact.value.trim()
+          [newContact.type === 'phone' ? 'phone' : `${newContact.type}_url`]: newContact.type === 'phone' ? `${newContact.countryCode}${newContact.value.trim()}` : newContact.value.trim()
         };
         
         await dispatch(updateProfile(profileData)).unwrap();
@@ -673,31 +626,71 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleProfilePictureUpload = async () => {
     try {
-      console.log('Starting profile picture upload process...');
-      
       // Request both camera and media library permissions
       const [mediaLibraryPermission, cameraPermission] = await Promise.all([
         ImagePicker.requestMediaLibraryPermissionsAsync(),
         ImagePicker.requestCameraPermissionsAsync()
       ]);
       
-      console.log('Media library permission result:', mediaLibraryPermission);
-      console.log('Camera permission result:', cameraPermission);
-      
       if (mediaLibraryPermission.granted === false && cameraPermission.granted === false) {
         Alert.alert('Permission Required', 'Permission to access camera roll or camera is required!');
         return;
       }
 
-      console.log('Launching image picker...');
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
-        allowsEditing: false,
-        quality: 1,
-      });
+      // Show options to user
+      Alert.alert(
+        'Profile Picture',
+        'Choose how you want to add your profile picture',
+        [
+          {
+            text: 'Camera',
+            onPress: () => handleImagePicker('camera'),
+            style: 'default'
+          },
+          {
+            text: 'Photo Library',
+            onPress: () => handleImagePicker('library'),
+            style: 'default'
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Profile picture upload outer error:', error);
+      setUploadingImage(false);
       
-      console.log('Image picker result:', result);
+      let errorMessage = 'Failed to update profile picture';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    }
+  };
 
+  const handleImagePicker = async (type) => {
+    try {
+      let result;
+      
+      if (type === 'camera') {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+      
       if (!result.canceled && result.assets[0]) {
         setUploadingImage(true);
         
@@ -711,10 +704,7 @@ const ProfileScreen = ({ navigation }) => {
           });
           
           // Upload the image to the backend
-          console.log('Uploading profile picture...');
-          console.log('FormData:', formData);
           const response = await profileAPI.uploadProfileImage(formData);
-          console.log('Profile picture upload response:', response.data);
           
           if (response.data.success) {
             Alert.alert('Success', 'Profile picture updated successfully!');
@@ -722,8 +712,8 @@ const ProfileScreen = ({ navigation }) => {
             dispatch(getProfile());
           } else {
             Alert.alert('Error', response.data.message || 'Failed to update profile picture');
-      }
-    } catch (error) {
+          }
+        } catch (error) {
           console.error('Profile picture upload error:', error);
           console.error('Error response:', error.response?.data);
           console.error('Error status:', error.response?.status);
@@ -741,55 +731,55 @@ const ProfileScreen = ({ navigation }) => {
         }
       }
     } catch (error) {
-      console.error('Profile picture upload outer error:', error);
+      console.error('Image picker error:', error);
       setUploadingImage(false);
-      
-      let errorMessage = 'Failed to update profile picture';
-      if (error.message) {
-        errorMessage = error.message;
+      Alert.alert('Error', 'Failed to access camera or photo library');
+    }
+  };
+
+  const handleUploadCV = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const formData = new FormData();
+        formData.append('cv', {
+          uri: result.assets[0].uri,
+          type: result.assets[0].mimeType || 'application/pdf',
+          name: result.assets[0].name,
+        });
+
+        try {
+          const response = await profileAPI.uploadCV(formData);
+          if (response.success) {
+            dispatch(getProfile());
+            showToast('CV uploaded successfully!', 'success');
+          } else {
+            showToast(response.message || 'Failed to upload CV', 'error');
+          }
+        } catch (error) {
+          console.error('Error uploading CV:', error);
+          showToast('Failed to upload CV', 'error');
+        }
       }
-      
-      Alert.alert('Error', errorMessage);
+    } catch (error) {
+      console.error('Error accessing document picker:', error);
+      showToast('Failed to access document picker', 'error');
     }
   };
 
   const handleViewCV = async () => {
     if (!profile?.cv?.stored_filename) {
-      Alert.alert('Error', 'CV file not found');
+      Alert.alert('Error', 'CV file not found. Please upload a CV first.');
       return;
     }
 
     try {
-      // Debug: Log the CV data to see what we're working with
-      console.log('CV Data:', profile.cv);
-      console.log('Stored filename:', profile.cv.stored_filename);
-      console.log('Original filename:', profile.cv.original_filename);
-      
-      // Construct the full URL to the CV file
-      const cvUrl = `http://192.168.101.122:5000/uploads/cvs/${profile.cv.stored_filename}`;
-      console.log('Opening CV URL:', cvUrl);
-      
-      // For now, show the URL in an alert so we can see what it's trying to access
-      Alert.alert(
-        'CV URL Debug', 
-        `Trying to access: ${cvUrl}\n\nStored filename: ${profile.cv.stored_filename}\nOriginal filename: ${profile.cv.original_filename}`,
-        [
-          {
-            text: 'Copy URL',
-            onPress: () => {
-              // You can implement clipboard functionality here
-              console.log('URL copied to clipboard:', cvUrl);
-            }
-          },
-          {
-            text: 'OK',
-            style: 'cancel'
-          }
-        ]
-      );
-      
-      // TODO: Implement in-app PDF viewer
-      // For now, we'll just show the debug info
+      // Show the CV viewer modal
+      setCvViewerVisible(true);
       
     } catch (error) {
       console.error('Error opening CV:', error);
@@ -797,48 +787,9 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handleDownloadCV = async () => {
-    if (!profile?.cv?.stored_filename) {
-      Alert.alert('Error', 'CV file not found');
-      return;
-    }
 
-    try {
-      // Debug: Log the CV data
-      console.log('CV Data for download:', profile.cv);
-      
-      // Construct the full URL to the CV file
-      const cvUrl = `http://192.168.101.122:5000/uploads/cvs/${profile.cv.stored_filename}`;
-      console.log('Downloading CV from URL:', cvUrl);
-      
-      // Show success message (in-app download simulation)
-      Alert.alert(
-        'Download Started', 
-        `CV "${profile.cv.original_filename}" is being downloaded.\n\nURL: ${cvUrl}`,
-        [
-          {
-            text: 'View in Browser',
-            onPress: async () => {
-              try {
-                await Linking.openURL(cvUrl);
-              } catch (error) {
-                console.error('Error opening URL:', error);
-                Alert.alert('Error', 'Failed to open URL in browser');
-              }
-            }
-          },
-          {
-            text: 'OK',
-            style: 'cancel'
-          }
-        ]
-      );
-      
-    } catch (error) {
-      console.error('Error downloading CV:', error);
-      Alert.alert('Error', 'Failed to download CV file');
-    }
-  };
+
+
 
   const renderSkills = () => {
     // Use skills from local state when editing, otherwise use profile data
@@ -863,97 +814,166 @@ const ProfileScreen = ({ navigation }) => {
       ];
     }
     
-    console.log('ProfileScreen - currentSkills:', currentSkills);
-    console.log('ProfileScreen - skills length:', currentSkills?.length);
-    
-    if (!currentSkills || currentSkills.length === 0) {
     return (
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>No skills available yet</Text>
-      </View>
-    );
-  }
-
-  return (
-      <View style={styles.skillsList}>
-        {currentSkills.map((skill, index) => (
-          <View key={index} style={styles.skillItem}>
-            <Text style={styles.skillName}>{skill.name}</Text>
-            <Text style={styles.skillLevel}>{skill.level || 'Proficient'}</Text>
-      </View>
-        ))}
-      </View>
+      <Card style={styles.sectionCard} elevation={2}>
+        <Card.Content>
+          <View style={styles.sectionHeader}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Skills
+            </Text>
+          </View>
+          
+          {currentSkills && currentSkills.length > 0 ? (
+            <View style={styles.skillsList}>
+              {currentSkills.map((skill, index) => (
+                <View key={index} style={styles.skillItem}>
+                  <Text style={styles.skillName}>{skill.name}</Text>
+                  <Text style={styles.skillLevel}>{skill.level || 'Proficient'}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptySection}>
+              <Text style={styles.emptyText}>No skills available yet</Text>
+            </View>
+          )}
+          
+          {/* Always show the Add Skills button when not editing */}
+          {!isEditing && (
+            <TouchableOpacity
+              onPress={handleEditToggle}
+              style={styles.addSectionButton}
+            >
+              <View style={styles.addSectionContent}>
+                <MaterialCommunityIcons name="plus-circle" size={32} color="#FF6B35" />
+                <View style={styles.addSectionText}>
+                  <Text style={styles.addSectionTitle}>Add Skills</Text>
+                  <Text style={styles.addSectionSubtitle}>Tap to add your skills and expertise</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#FF6B35" />
+              </View>
+            </TouchableOpacity>
+          )}
+        </Card.Content>
+      </Card>
     );
   };
 
   const renderEducation = () => {
     // Use education from local state when editing, otherwise use profile data
     const currentEducation = isEditing ? education : (profile?.education || []);
-    console.log('ProfileScreen - currentEducation:', currentEducation);
-    console.log('ProfileScreen - education length:', currentEducation?.length);
     
-    if (!currentEducation || currentEducation.length === 0) {
-      return (
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>No education information available yet</Text>
-        </View>
-      );
-    }
-
     return (
-      <View style={styles.educationList}>
-        {currentEducation.map((edu, index) => (
-          <View key={index} style={styles.educationItem}>
-            <Text style={styles.educationDegree}>{edu.degree || edu.title}</Text>
-            <Text style={styles.educationInstitution}>{edu.institution || edu.school}</Text>
-            <Text style={styles.educationYear}>{edu.year || edu.graduation_year}</Text>
+      <Card style={styles.sectionCard} elevation={2}>
+        <Card.Content>
+          <View style={styles.sectionHeader}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Education
+            </Text>
           </View>
-        ))}
-      </View>
+          
+          {currentEducation && currentEducation.length > 0 ? (
+            <View style={styles.educationList}>
+              {currentEducation.map((edu, index) => (
+                <View key={index} style={styles.educationItem}>
+                  <Text style={styles.educationDegree}>{edu.degree || edu.title}</Text>
+                  <Text style={styles.educationInstitution}>{edu.institution || edu.school}</Text>
+                  <Text style={styles.educationYear}>{edu.year || edu.graduation_year}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptySection}>
+              <Text style={styles.emptyText}>No education information available yet</Text>
+            </View>
+          )}
+          
+          {/* Always show the Add Education button when not editing */}
+          {!isEditing && (
+            <TouchableOpacity
+              onPress={handleEditToggle}
+              style={styles.addSectionButton}
+            >
+              <View style={styles.addSectionContent}>
+                <MaterialCommunityIcons name="plus-circle" size={32} color="#FF6B35" />
+                <View style={styles.addSectionText}>
+                  <Text style={styles.addSectionTitle}>Add Education</Text>
+                  <Text style={styles.addSectionSubtitle}>Tap to add your educational background</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#FF6B35" />
+              </View>
+            </TouchableOpacity>
+          )}
+        </Card.Content>
+      </Card>
     );
   };
 
   const renderWorkExperience = () => {
     // Use work experience from local state when editing, otherwise use profile data
     const currentWorkExperience = isEditing ? workExperience : (profile?.work_experience || []);
-    console.log('ProfileScreen - currentWorkExperience:', currentWorkExperience);
-    console.log('ProfileScreen - work_experience length:', currentWorkExperience?.length);
     
-    if (!currentWorkExperience || currentWorkExperience.length === 0) {
-      return (
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>No work experience available yet</Text>
-        </View>
-      );
-    }
-
     return (
-      <View style={styles.experienceList}>
-        {currentWorkExperience.map((exp, index) => (
-          <View key={index} style={styles.experienceItem}>
-            <Text style={styles.experienceTitle}>{exp.title || exp.position}</Text>
-            <Text style={styles.experienceCompany}>{exp.company || exp.employer}</Text>
-            <Text style={styles.experienceDuration}>{exp.duration || `${exp.start_date} - ${exp.end_date || 'Present'}`}</Text>
-            <Text style={styles.experienceDescription}>{exp.description || exp.responsibilities}</Text>
+      <Card style={styles.sectionCard} elevation={2}>
+        <Card.Content>
+          <View style={styles.sectionHeader}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Work Experience
+            </Text>
           </View>
-        ))}
-      </View>
+          
+          {currentWorkExperience && currentWorkExperience.length > 0 ? (
+            <View style={styles.experienceList}>
+              {currentWorkExperience.map((exp, index) => (
+                <View key={index} style={styles.experienceItem}>
+                  <Text style={styles.experienceTitle}>{exp.title || exp.position}</Text>
+                  <Text style={styles.experienceCompany}>{exp.company || exp.employer}</Text>
+                  <Text style={styles.experienceDuration}>{exp.duration || `${exp.start_date} - ${exp.end_date || 'Present'}`}</Text>
+                  <Text style={styles.experienceDescription}>{exp.description || exp.responsibilities}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptySection}>
+              <Text style={styles.emptyText}>No work experience available yet</Text>
+            </View>
+          )}
+          
+          {/* Always show the Add Work Experience button when not editing */}
+          {!isEditing && (
+            <TouchableOpacity
+              onPress={handleEditToggle}
+              style={styles.addSectionButton}
+            >
+              <View style={styles.addSectionContent}>
+                <MaterialCommunityIcons name="plus-circle" size={32} color="#FF6B35" />
+                <View style={styles.addSectionText}>
+                  <Text style={styles.addSectionTitle}>Add Work Experience</Text>
+                  <Text style={styles.addSectionSubtitle}>Tap to add your professional experience</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#FF6B35" />
+                </View>
+            </TouchableOpacity>
+          )}
+        </Card.Content>
+      </Card>
     );
   };
 
   const renderEditSkills = () => (
     <Card style={styles.sectionCard} elevation={2}>
       <Card.Content>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Skills Management
-        </Text>
+        <View style={styles.editSectionHeader}>
+          <MaterialCommunityIcons name="star" size={24} color="#FF6B35" />
+          <Text variant="titleMedium" style={styles.editSectionTitle}>
+            Skills Management
+          </Text>
+        </View>
         
         {/* Current Skills */}
-        <View style={styles.currentSkillsContainer}>
-          <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Skills:</Text>
-          {skills.length === 0 ? (
-            <Text style={styles.emptyText}>No skills added yet</Text>
-          ) : (
+        {skills.length > 0 && (
+          <View style={styles.currentSkillsContainer}>
+            <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Skills:</Text>
             <View style={styles.skillsChipsContainer}>
               {skills.map((skill, index) => (
                 <Chip
@@ -986,54 +1006,65 @@ const ProfileScreen = ({ navigation }) => {
                 </Chip>
               ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
-        {/* Add New Skill */}
+        {/* Add New Skill Form */}
         <View style={styles.addSkillContainer}>
-          <Text variant="bodyMedium" style={styles.subsectionTitle}>Add New Skill:</Text>
-          <View style={styles.addSkillRow}>
-            <TextInput
-              mode="outlined"
-              label="Skill Name"
-              value={newSkill}
-              onChangeText={setNewSkill}
-              style={[styles.formInput, styles.skillInput]}
-              outlineColor="#E0E0E0"
-              activeOutlineColor="#FF6B35"
-              placeholder="e.g., JavaScript"
-            />
-            <View style={styles.skillLevelContainer}>
-              <Text style={styles.skillLevelLabel}>Level:</Text>
+          <View style={styles.addFormHeader}>
+            <MaterialCommunityIcons name="plus-circle" size={24} color="#FF6B35" />
+            <Text variant="bodyMedium" style={styles.addFormTitle}>Add New Skill</Text>
+          </View>
+          
+          <View style={styles.skillFormContainer}>
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Skill Name *</Text>
+              <TextInput
+                mode="outlined"
+                value={newSkill}
+                onChangeText={setNewSkill}
+                style={styles.enhancedFormInput}
+                outlineColor="#E0E0E0"
+                activeOutlineColor="#FF6B35"
+                placeholder="Type your skill here (e.g., JavaScript, React, Python)"
+                placeholderTextColor="#999"
+              />
+            </View>
+            
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Proficiency Level *</Text>
               <View style={styles.skillLevelButtons}>
                 {['Beginner', 'Intermediate', 'Proficient', 'Expert'].map((level) => (
-                  <Chip
+                  <TouchableOpacity
                     key={level}
-                    mode={newSkillLevel === level ? 'flat' : 'outlined'}
                     onPress={() => setNewSkillLevel(level)}
                     style={[
-                      styles.levelChip,
-                      newSkillLevel === level && styles.selectedLevelChip
-                    ]}
-                    textStyle={[
-                      styles.levelChipText,
-                      newSkillLevel === level && styles.selectedLevelChipText
+                      styles.enhancedLevelButton,
+                      newSkillLevel === level && styles.selectedEnhancedLevelButton
                     ]}
                   >
-                    {level}
-                  </Chip>
+                    <Text style={[
+                      styles.enhancedLevelButtonText,
+                      newSkillLevel === level && styles.selectedEnhancedLevelButtonText
+                    ]}>
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>
-            <Button
-              mode="contained"
+            
+            <TouchableOpacity
               onPress={addSkill}
-              style={styles.addButton}
+              style={[
+                styles.enhancedAddButton,
+                !newSkill.trim() && styles.enhancedAddButtonDisabled
+              ]}
               disabled={!newSkill.trim()}
-              icon="plus"
             >
-              Add
-            </Button>
+              <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+              <Text style={styles.enhancedAddButtonText}>Add Skill</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Card.Content>
@@ -1043,16 +1074,17 @@ const ProfileScreen = ({ navigation }) => {
   const renderEditEducation = () => (
     <Card style={styles.sectionCard} elevation={2}>
       <Card.Content>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Education Management
-                </Text>
+        <View style={styles.editSectionHeader}>
+          <MaterialCommunityIcons name="school" size={24} color="#FF6B35" />
+          <Text variant="titleMedium" style={styles.editSectionTitle}>
+            Education Management
+          </Text>
+        </View>
         
         {/* Current Education */}
-        <View style={styles.currentEducationContainer}>
-          <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Education:</Text>
-          {education.length === 0 ? (
-            <Text style={styles.emptyText}>No education added yet</Text>
-          ) : (
+        {education.length > 0 && (
+          <View style={styles.currentEducationContainer}>
+            <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Education:</Text>
             <View style={styles.educationList}>
               {education.map((edu, index) => (
                 <View key={index} style={styles.educationEditItem}>
@@ -1064,7 +1096,7 @@ const ProfileScreen = ({ navigation }) => {
                       iconColor="#EF4444"
                       onPress={() => removeEducation(index)}
                     />
-              </View>
+                  </View>
                   <Text style={styles.educationEditInstitution}>{edu.institution}</Text>
                   <Text style={styles.educationEditYear}>{edu.year}</Text>
                   {edu.description && (
@@ -1073,86 +1105,106 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               ))}
             </View>
-            )}
           </View>
+        )}
 
-        {/* Add New Education */}
+        {/* Add New Education Form */}
         <View style={styles.addEducationContainer}>
-          <Text variant="bodyMedium" style={styles.subsectionTitle}>Add New Education:</Text>
+          <View style={styles.addFormHeader}>
+            <MaterialCommunityIcons name="plus-circle" size={24} color="#FF6B35" />
+            <Text variant="bodyMedium" style={styles.addFormTitle}>Add New Education</Text>
+          </View>
           
-          <TextInput
-            mode="outlined"
-            label="Degree/Qualification"
-            value={newEducation.degree}
-            onChangeText={(value) => setNewEducation(prev => ({ ...prev, degree: value }))}
-            style={styles.formInput}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#FF6B35"
-            placeholder="e.g., Bachelor of Science in Computer Science"
-          />
+          <View style={styles.educationFormContainer}>
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Degree/Qualification *</Text>
+              <TextInput
+                mode="outlined"
+                value={newEducation.degree}
+                onChangeText={(value) => setNewEducation(prev => ({ ...prev, degree: value }))}
+                style={styles.enhancedFormInput}
+                outlineColor="#E0E0E0"
+                activeOutlineColor="#FF6B35"
+                placeholder="Type your degree here (e.g., Bachelor of Science in Computer Science)"
+                placeholderTextColor="#999"
+              />
+            </View>
 
-          <TextInput
-            mode="outlined"
-            label="Institution"
-            value={newEducation.institution}
-            onChangeText={(value) => setNewEducation(prev => ({ ...prev, institution: value }))}
-            style={styles.formInput}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#FF6B35"
-            placeholder="e.g., University of Technology"
-          />
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Institution *</Text>
+              <TextInput
+                mode="outlined"
+                value={newEducation.institution}
+                onChangeText={(value) => setNewEducation(prev => ({ ...prev, institution: value }))}
+                style={styles.enhancedFormInput}
+                outlineColor="#E0E0E0"
+                activeOutlineColor="#FF6B35"
+                placeholder="Type your institution name here (e.g., University of Technology)"
+                placeholderTextColor="#999"
+              />
+            </View>
 
-          <TextInput
-            mode="outlined"
-            label="Year"
-            value={newEducation.year}
-            onChangeText={(value) => setNewEducation(prev => ({ ...prev, year: value }))}
-            style={styles.formInput}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#FF6B35"
-            placeholder="e.g., 2020"
-          />
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Year *</Text>
+              <TextInput
+                mode="outlined"
+                value={newEducation.year}
+                onChangeText={(value) => setNewEducation(prev => ({ ...prev, year: value }))}
+                style={styles.enhancedFormInput}
+                outlineColor="#E0E0E0"
+                activeOutlineColor="#FF6B35"
+                placeholder="Type graduation year here (e.g., 2020)"
+                placeholderTextColor="#999"
+              />
+            </View>
 
-          <TextInput
-            mode="outlined"
-            label="Description (Optional)"
-            value={newEducation.description}
-            onChangeText={(value) => setNewEducation(prev => ({ ...prev, description: value }))}
-            style={[styles.formInput, styles.textArea]}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#FF6B35"
-            multiline
-            numberOfLines={3}
-            placeholder="Brief description of your studies..."
-          />
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Description (Optional)</Text>
+              <TextInput
+                mode="outlined"
+                value={newEducation.description}
+                onChangeText={(value) => setNewEducation(prev => ({ ...prev, description: value }))}
+                style={[styles.enhancedFormInput, styles.enhancedTextArea]}
+                outlineColor="#E0E0E0"
+                activeOutlineColor="#FF6B35"
+                multiline
+                numberOfLines={3}
+                placeholder="Brief description of your studies, achievements, or focus areas..."
+                placeholderTextColor="#999"
+              />
+            </View>
 
-          <Button
-            mode="contained"
-            onPress={addEducation}
-            style={styles.addButton}
-            disabled={!newEducation.degree.trim() || !newEducation.institution.trim()}
-            icon="plus"
-          >
-            Add Education
-          </Button>
+            <TouchableOpacity
+              onPress={addEducation}
+              style={[
+                styles.enhancedAddButton,
+                (!newEducation.degree.trim() || !newEducation.institution.trim()) && styles.enhancedAddButtonDisabled
+              ]}
+              disabled={!newEducation.degree.trim() || !newEducation.institution.trim()}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+              <Text style={styles.enhancedAddButtonText}>Add Education</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Card.Content>
     </Card>
   );
 
-     const renderEditWorkExperience = () => (
+          const renderEditWorkExperience = () => (
      <Card style={styles.sectionCard} elevation={2}>
        <Card.Content>
-         <Text variant="titleMedium" style={styles.sectionTitle}>
-           Work Experience Management
-          </Text>
+         <View style={styles.editSectionHeader}>
+           <MaterialCommunityIcons name="briefcase" size={24} color="#FF6B35" />
+           <Text variant="titleMedium" style={styles.editSectionTitle}>
+             Work Experience Management
+           </Text>
+         </View>
          
          {/* Current Work Experience */}
-         <View style={styles.currentWorkExperienceContainer}>
-           <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Work Experience:</Text>
-           {workExperience.length === 0 ? (
-             <Text style={styles.emptyText}>No work experience added yet</Text>
-           ) : (
+         {workExperience.length > 0 && (
+           <View style={styles.currentWorkExperienceContainer}>
+             <Text variant="bodyMedium" style={styles.subsectionTitle}>Current Work Experience:</Text>
              <View style={styles.workExperienceList}>
                {workExperience.map((exp, index) => (
                  <View key={index} style={styles.workExperienceEditItem}>
@@ -1173,81 +1225,103 @@ const ProfileScreen = ({ navigation }) => {
                  </View>
                ))}
              </View>
-           )}
-        </View>
+           </View>
+         )}
 
-         {/* Add New Work Experience */}
+         {/* Add New Work Experience Form */}
          <View style={styles.addWorkExperienceContainer}>
-           <Text variant="bodyMedium" style={styles.subsectionTitle}>Add New Work Experience:</Text>
+           <View style={styles.addFormHeader}>
+             <MaterialCommunityIcons name="plus-circle" size={24} color="#FF6B35" />
+             <Text variant="bodyMedium" style={styles.addFormTitle}>Add New Work Experience</Text>
+           </View>
            
-            <TextInput
-             mode="outlined"
-             label="Job Title"
-             value={newWorkExperience.title}
-             onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, title: value }))}
-             style={styles.formInput}
-             outlineColor="#E0E0E0"
-             activeOutlineColor="#FF6B35"
-             placeholder="e.g., Software Developer"
-           />
+           <View style={styles.workExperienceFormContainer}>
+             <View style={styles.inputFieldContainer}>
+               <Text style={styles.inputLabel}>Job Title *</Text>
+               <TextInput
+                 mode="outlined"
+                 value={newWorkExperience.title}
+                 onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, title: value }))}
+                 style={styles.enhancedFormInput}
+                 outlineColor="#E0E0E0"
+                 activeOutlineColor="#FF6B35"
+                 placeholder="Type your job title here (e.g., Software Developer)"
+                 placeholderTextColor="#999"
+               />
+             </View>
 
-            <TextInput
-             mode="outlined"
-             label="Company"
-             value={newWorkExperience.company}
-             onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, company: value }))}
-             style={styles.formInput}
-             outlineColor="#E0E0E0"
-             activeOutlineColor="#FF6B35"
-             placeholder="e.g., Tech Company Inc."
-           />
+             <View style={styles.inputFieldContainer}>
+               <Text style={styles.inputLabel}>Company *</Text>
+               <TextInput
+                 mode="outlined"
+                 value={newWorkExperience.company}
+                 onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, company: value }))}
+                 style={styles.enhancedFormInput}
+                 outlineColor="#E0E0E0"
+                 activeOutlineColor="#FF6B35"
+                 placeholder="Type your company name here (e.g., Tech Company Inc.)"
+                 placeholderTextColor="#999"
+               />
+             </View>
 
-           <View style={styles.dateRow}>
-            <TextInput
-               mode="outlined"
-               label="Start Date"
-               value={newWorkExperience.start_date}
-               onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, start_date: value }))}
-               style={[styles.formInput, styles.dateInput]}
-               outlineColor="#E0E0E0"
-               activeOutlineColor="#FF6B35"
-               placeholder="e.g., Jan 2020"
-             />
-             <TextInput
-               mode="outlined"
-               label="End Date"
-               value={newWorkExperience.end_date}
-               onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, end_date: value }))}
-               style={[styles.formInput, styles.dateInput]}
-               outlineColor="#E0E0E0"
-               activeOutlineColor="#FF6B35"
-               placeholder="e.g., Dec 2023 (or leave empty for current)"
-            />
-          </View>
+             <View style={styles.dateRowContainer}>
+               <View style={styles.dateFieldContainer}>
+                 <Text style={styles.inputLabel}>Start Date *</Text>
+                 <TextInput
+                   mode="outlined"
+                   value={newWorkExperience.start_date}
+                   onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, start_date: value }))}
+                   style={styles.enhancedFormInput}
+                   outlineColor="#E0E0E0"
+                   activeOutlineColor="#FF6B35"
+                   placeholder="Type start date here (e.g., Jan 2020)"
+                   placeholderTextColor="#999"
+                 />
+               </View>
+               <View style={styles.dateFieldContainer}>
+                 <Text style={styles.inputLabel}>End Date</Text>
+                 <TextInput
+                   mode="outlined"
+                   value={newWorkExperience.end_date}
+                   onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, end_date: value }))}
+                   style={styles.enhancedFormInput}
+                   outlineColor="#E0E0E0"
+                   activeOutlineColor="#FF6B35"
+                   placeholder="Type end date here (e.g., Dec 2023) or leave empty for current"
+                   placeholderTextColor="#999"
+                 />
+               </View>
+             </View>
 
-            <TextInput
-             mode="outlined"
-             label="Description (Optional)"
-             value={newWorkExperience.description}
-             onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, description: value }))}
-             style={[styles.formInput, styles.textArea]}
-             outlineColor="#E0E0E0"
-             activeOutlineColor="#FF6B35"
-             multiline
-             numberOfLines={3}
-             placeholder="Brief description of your role and responsibilities..."
-           />
+             <View style={styles.inputFieldContainer}>
+               <Text style={styles.inputLabel}>Description (Optional)</Text>
+               <TextInput
+                 mode="outlined"
+                 value={newWorkExperience.description}
+                 onChangeText={(value) => setNewWorkExperience(prev => ({ ...prev, description: value }))}
+                 style={[styles.enhancedFormInput, styles.enhancedTextArea]}
+                 outlineColor="#E0E0E0"
+                 activeOutlineColor="#FF6B35"
+                 multiline
+                 numberOfLines={3}
+                 placeholder="Brief description of your role, responsibilities, and achievements..."
+                 placeholderTextColor="#999"
+               />
+             </View>
 
-           <Button
-             mode="contained"
-             onPress={addWorkExperience}
-             style={styles.addButton}
-             disabled={!newWorkExperience.title.trim() || !newWorkExperience.company.trim()}
-             icon="plus"
-           >
-             Add Work Experience
-           </Button>
-          </View>
+             <TouchableOpacity
+               onPress={addWorkExperience}
+               style={[
+                 styles.enhancedAddButton,
+                 (!newWorkExperience.title.trim() || !newWorkExperience.company.trim()) && styles.enhancedAddButtonDisabled
+               ]}
+               disabled={!newWorkExperience.title.trim() || !newWorkExperience.company.trim()}
+             >
+               <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+               <Text style={styles.enhancedAddButtonText}>Add Work Experience</Text>
+             </TouchableOpacity>
+           </View>
+         </View>
        </Card.Content>
      </Card>
    );
@@ -1255,71 +1329,111 @@ const ProfileScreen = ({ navigation }) => {
    const renderEditContact = () => (
     <Card style={styles.sectionCard} elevation={2}>
       <Card.Content>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Add Contact Information
-        </Text>
+        <View style={styles.editSectionHeader}>
+          <MaterialCommunityIcons name="contact-mail" size={24} color="#FF6B35" />
+          <Text variant="titleMedium" style={styles.editSectionTitle}>
+            Contact Information
+          </Text>
+        </View>
         
         <Text variant="bodySmall" style={styles.contactNote}>
           Note: You can add new contact information. Existing contact details cannot be edited.
         </Text>
 
         <View style={styles.addContactContainer}>
-          <View style={styles.contactTypeSelector}>
-            <Text style={styles.contactTypeLabel}>Contact Type:</Text>
-            <View style={styles.contactTypeButtons}>
-              {[
-                { type: 'phone', label: 'Phone', icon: 'phone' },
-                { type: 'linkedin', label: 'LinkedIn', icon: 'linkedin' },
-                { type: 'github', label: 'GitHub', icon: 'github' }
-              ].map((contactType) => (
-                <Chip
-                  key={contactType.type}
-                  mode={newContact.type === contactType.type ? 'flat' : 'outlined'}
-                  onPress={() => setNewContact(prev => ({ ...prev, type: contactType.type }))}
-                  style={[
-                    styles.contactTypeChip,
-                    newContact.type === contactType.type && styles.selectedContactTypeChip
-                  ]}
-                  textStyle={[
-                    styles.contactTypeChipText,
-                    newContact.type === contactType.type && styles.selectedContactTypeChipText
-                  ]}
-                  icon={contactType.icon}
-                >
-                  {contactType.label}
-                </Chip>
-              ))}
+          <View style={styles.addFormHeader}>
+            <MaterialCommunityIcons name="plus-circle" size={24} color="#FF6B35" />
+            <Text variant="bodyMedium" style={styles.addFormTitle}>Add New Contact</Text>
+          </View>
+          
+          <View style={styles.contactFormContainer}>
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>Contact Type *</Text>
+              <View style={styles.contactTypeButtons}>
+                {[
+                  { type: 'phone', label: 'Phone', icon: 'phone' },
+                  { type: 'linkedin', label: 'LinkedIn', icon: 'linkedin' },
+                  { type: 'github', label: 'GitHub', icon: 'github' }
+                ].map((contactType) => (
+                  <TouchableOpacity
+                    key={contactType.type}
+                    onPress={() => setNewContact(prev => ({ ...prev, type: contactType.type }))}
+                    style={[
+                      styles.enhancedContactTypeButton,
+                      newContact.type === contactType.type && styles.selectedEnhancedContactTypeButton
+                    ]}
+                  >
+                    <MaterialCommunityIcons 
+                      name={contactType.icon} 
+                      size={20} 
+                      color={newContact.type === contactType.type ? '#FFFFFF' : '#FF6B35'} 
+                    />
+                    <Text style={[
+                      styles.enhancedContactTypeButtonText,
+                      newContact.type === contactType.type && styles.selectedEnhancedContactTypeButtonText
+                    ]}>
+                      {contactType.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
 
-            <TextInput
-            mode="outlined"
-            label={`${newContact.type.charAt(0).toUpperCase() + newContact.type.slice(1)} ${newContact.type === 'phone' ? 'Number' : 'URL'}`}
-            value={newContact.value}
-            onChangeText={(value) => setNewContact(prev => ({ ...prev, value }))}
-            style={styles.formInput}
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#FF6B35"
-            placeholder={
-              newContact.type === 'phone' 
-                ? '+1 (555) 123-4567' 
-                : newContact.type === 'linkedin'
-                ? 'https://linkedin.com/in/yourprofile'
-                : 'https://github.com/yourusername'
-            }
-            keyboardType={newContact.type === 'phone' ? 'phone-pad' : 'url'}
-          />
+            <View style={styles.inputFieldContainer}>
+              <Text style={styles.inputLabel}>
+                {newContact.type === 'phone' ? 'Phone Number *' : 
+                 newContact.type === 'linkedin' ? 'LinkedIn URL *' : 'GitHub URL *'}
+              </Text>
+              {newContact.type === 'phone' ? (
+                <View style={styles.phoneInputContainer}>
+                  <CountryCodePicker
+                    selectedCode={newContact.countryCode}
+                    onSelectCode={(code) => setNewContact(prev => ({ ...prev, countryCode: code }))}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    value={newContact.value}
+                    onChangeText={(value) => setNewContact(prev => ({ ...prev, value }))}
+                    style={[styles.enhancedFormInput, styles.phoneInput]}
+                    outlineColor="#E0E0E0"
+                    activeOutlineColor="#FF6B35"
+                    placeholder="Type your phone number here (e.g., (555) 123-4567)"
+                    placeholderTextColor="#999"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              ) : (
+                <TextInput
+                  mode="outlined"
+                  value={newContact.value}
+                  onChangeText={(value) => setNewContact(prev => ({ ...prev, value }))}
+                  style={styles.enhancedFormInput}
+                  outlineColor="#E0E0E0"
+                  activeOutlineColor="#FF6B35"
+                  placeholder={
+                    newContact.type === 'linkedin'
+                      ? 'Type your LinkedIn profile URL here (e.g., https://linkedin.com/in/yourprofile)'
+                      : 'Type your GitHub profile URL here (e.g., https://github.com/yourusername)'
+                  }
+                  placeholderTextColor="#999"
+                  keyboardType="url"
+                />
+              )}
+            </View>
 
-          <Button
-            mode="contained"
-            onPress={addContact}
-            style={styles.addButton}
-            disabled={!newContact.value.trim()}
-            icon="plus"
-          >
-            Add Contact
-          </Button>
+            <TouchableOpacity
+              onPress={addContact}
+              style={[
+                styles.enhancedAddButton,
+                !newContact.value.trim() && styles.enhancedAddButtonDisabled
+              ]}
+              disabled={!newContact.value.trim()}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+              <Text style={styles.enhancedAddButtonText}>Add Contact</Text>
+            </TouchableOpacity>
           </View>
+        </View>
       </Card.Content>
     </Card>
   );
@@ -1378,60 +1492,41 @@ const ProfileScreen = ({ navigation }) => {
           placeholder="Write a brief professional summary..."
         />
 
-        <View style={styles.availabilityContainer}>
-          <Text variant="bodyMedium" style={styles.availabilityLabel}>
-            Availability Status
-          </Text>
-          <Text style={styles.availabilityDebug}>
-            Current status: {formData.availability_status === 'available' ? 'Available' : 'Not Available'}
-          </Text>
-          <View style={styles.availabilityToggle}>
-            <TouchableOpacity
-              style={[
-                styles.availabilityButton,
-                formData.availability_status === 'available' && styles.availableButton
-              ]}
-              onPress={() => {
-                console.log('ProfileScreen: Setting availability to available');
-                handleInputChange('availability_status', 'available');
-              }}
-            >
-              <MaterialCommunityIcons 
-                name="check-circle" 
-                size={20} 
-                color={formData.availability_status === 'available' ? '#FFFFFF' : '#666666'} 
-              />
-              <Text style={[
-                styles.availabilityText,
-                formData.availability_status === 'available' && styles.availableText
-              ]}>
-                Available for Work
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.availabilityButton,
-                formData.availability_status !== 'available' && styles.unavailableButton
-              ]}
-              onPress={() => {
-                console.log('ProfileScreen: Setting availability to unavailable');
-                handleInputChange('availability_status', 'unavailable');
-              }}
-            >
-              <MaterialCommunityIcons 
-                name="close-circle" 
-                size={20} 
-                color={formData.availability_status !== 'available' ? '#FFFFFF' : '#666666'} 
-              />
-              <Text style={[
-                styles.availabilityText,
-                formData.availability_status !== 'available' && styles.unavailableText
-              ]}>
-                Not Available
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <TextInput
+          mode="outlined"
+          label="Phone Number"
+          value={formData.phone}
+          onChangeText={(value) => handleInputChange('phone', value)}
+          style={styles.formInput}
+          outlineColor="#E0E0E0"
+          activeOutlineColor="#FF6B35"
+          placeholder="+1 (555) 123-4567"
+          keyboardType="phone-pad"
+        />
+
+        <TextInput
+          mode="outlined"
+          label="LinkedIn URL"
+          value={formData.linkedin_url}
+          onChangeText={(value) => handleInputChange('linkedin_url', value)}
+          style={styles.formInput}
+          outlineColor="#E0E0E0"
+          activeOutlineColor="#FF6B35"
+          placeholder="https://linkedin.com/in/yourprofile"
+          keyboardType="url"
+        />
+
+        <TextInput
+          mode="outlined"
+          label="GitHub URL"
+          value={formData.github_url}
+          onChangeText={(value) => handleInputChange('github_url', value)}
+          style={styles.formInput}
+          outlineColor="#E0E0E0"
+          activeOutlineColor="#FF6B35"
+          placeholder="https://github.com/yourusername"
+          keyboardType="url"
+        />
       </Card.Content>
     </Card>
   );
@@ -1439,29 +1534,44 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile Header */}
-      <Surface style={styles.header} elevation={2}>
+      <Surface style={styles.header} elevation={3}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleProfilePictureUpload} disabled={uploadingImage}>
-            {profile?.profile_picture_url ? (
-              <Avatar.Image
-                size={80}
-                source={{ uri: `http://192.168.101.122:5000${profile.profile_picture_url}` }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Avatar.Icon
-                size={80}
-                icon="account"
-                style={[styles.profileImage, { backgroundColor: '#FF6B35' }]}
-              />
-            )}
-            {uploadingImage && (
-              <View style={styles.uploadingOverlay}>
-                <Text style={styles.uploadingText}>Uploading...</Text>
+          <View style={styles.profilePictureSection}>
+            <TouchableOpacity 
+              onPress={handleProfilePictureUpload} 
+              disabled={uploadingImage}
+              style={styles.profilePictureContainer}
+            >
+              {profile?.profile_picture_url ? (
+                <View style={styles.profileImageWrapper}>
+                  <Avatar.Image
+                    size={100}
+                    source={{ uri: `http://192.168.101.104:5000${profile.profile_picture_url}` }}
+                    style={styles.profileImage}
+                  />
+                </View>
+              ) : (
+                <View style={styles.profileImageWrapper}>
+                  <Avatar.Icon
+                    size={100}
+                    icon="account"
+                    style={[styles.profileImage, { backgroundColor: '#FF6B35' }]}
+                  />
+                </View>
+              )}
+              
+              {uploadingImage && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="large" color="#FF6B35" />
+                  <Text style={styles.uploadingText}>Uploading...</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            
+            <Text style={styles.uploadHint}>
+              {profile?.profile_picture_url ? 'Tap to change photo' : 'Tap to add profile photo'}
+            </Text>
           </View>
-            )}
-            <Text style={styles.uploadHint}>Tap to upload</Text>
-          </TouchableOpacity>
           
           <View style={styles.headerText}>
             <Text variant="headlineSmall" style={styles.welcomeText}>
@@ -1473,7 +1583,7 @@ const ProfileScreen = ({ navigation }) => {
             <Text variant="bodySmall" style={styles.emailText}>
               {profile?.email || user?.email}
             </Text>
-        </View>
+          </View>
 
           {/* Edit Button */}
           <View style={styles.editButtonContainer}>
@@ -1616,7 +1726,7 @@ const ProfileScreen = ({ navigation }) => {
       </Card>
 
       {/* CV Information */}
-      {profile?.cv && (
+      {profile?.cv ? (
         <Card style={styles.sectionCard} elevation={2}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -1639,17 +1749,53 @@ const ProfileScreen = ({ navigation }) => {
               </Button>
               <Button
                 mode="outlined"
-                onPress={handleDownloadCV}
-                style={[styles.cvButton, styles.downloadCVButton]}
+                onPress={handleUploadCV}
+                style={[styles.cvButton, styles.uploadCVButton]}
                 contentStyle={styles.cvButtonContent}
-                icon="download"
+                icon="upload"
               >
-                Download
+                Replace CV
+              </Button>
+
+            </View>
+          </Card.Content>
+        </Card>
+      ) : (
+        <Card style={styles.sectionCard} elevation={2}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              CV Information
+            </Text>
+            <View style={styles.cvUploadContainer}>
+              <Text style={styles.cvUploadText}>No CV uploaded yet</Text>
+              <Button
+                mode="contained"
+                onPress={handleUploadCV}
+                style={[styles.cvButton, styles.uploadCVButton]}
+                contentStyle={styles.cvButtonContent}
+                icon="upload"
+              >
+                Upload CV
               </Button>
             </View>
           </Card.Content>
         </Card>
       )}
+
+            {/* CV Viewer Modal */}
+      {cvViewerVisible && profile?.cv?.stored_filename && (
+        <CVViewer
+          visible={cvViewerVisible}
+          onClose={() => setCvViewerVisible(false)}
+          cvUrl={`http://192.168.101.104:5000/cv/${profile.cv.stored_filename}`}
+          cvFilename={profile?.cv?.original_filename || 'CV'}
+          cvData={profile?.cv}
+        />
+      )}
+      
+
+      
+
     </ScrollView>
   );
 };
@@ -1869,11 +2015,22 @@ const styles = StyleSheet.create({
   viewCVButton: {
     backgroundColor: '#FF6B35',
   },
-  downloadCVButton: {
-    borderColor: '#8B4513',
+
+  uploadCVButton: {
+    borderColor: '#FF6B35',
   },
   cvButtonContent: {
     height: 40,
+  },
+  cvUploadContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  cvUploadText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   // Edit form styles
   formRow: {
@@ -2140,6 +2297,524 @@ const styles = StyleSheet.create({
   },
   selectedContactTypeChipText: {
     color: '#fff',
+  },
+  // New styles for improved UI
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F8FF',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    gap: 4,
+  },
+  addButtonText: {
+    color: '#FF6B35',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  addButtonEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F0F8FF',
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    borderStyle: 'dashed',
+    gap: 8,
+    marginTop: 12,
+  },
+  addButtonEmptyText: {
+    color: '#FF6B35',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Edit section styles
+  editSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    borderLeftWidth: 5,
+    borderLeftColor: '#FF9800',
+    borderTopWidth: 1,
+    borderTopColor: '#FFF3E0',
+    borderRightWidth: 1,
+    borderRightColor: '#FFF3E0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFF3E0',
+  },
+  editSectionTitle: {
+    fontWeight: 'bold',
+    color: '#E65100',
+    marginLeft: 12,
+    fontSize: 20,
+  },
+  // Add form styles
+  addFormHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B35',
+  },
+  addFormTitle: {
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+  },
+  // Skills form styles
+  skillFormContainer: {
+    gap: 16,
+  },
+  skillNameInput: {
+    marginBottom: 8,
+  },
+  skillLevelSection: {
+    marginBottom: 16,
+  },
+  skillLevelLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  skillLevelButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  levelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  selectedLevelButton: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  levelButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  selectedLevelButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  addSkillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#FF6B35',
+    gap: 8,
+  },
+  addSkillButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+  },
+  addSkillButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Education and Work Experience form styles
+  educationFormContainer: {
+    gap: 16,
+  },
+  workExperienceFormContainer: {
+    gap: 16,
+  },
+  // Contact form styles
+  contactFormContainer: {
+    gap: 16,
+  },
+  contactTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFFFFF',
+    gap: 6,
+  },
+  selectedContactTypeButton: {
+    backgroundColor: '#FF6B35',
+  },
+  contactTypeButtonText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '500',
+  },
+  selectedContactTypeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  // Common add button styles
+  addFormButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#FF6B35',
+    gap: 8,
+  },
+  addFormButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+  },
+  addFormButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // New clear add section button styles
+  addSectionButton: {
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    borderStyle: 'dashed',
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addSectionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addSectionText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  addSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FF6B35',
+    marginBottom: 4,
+  },
+  addSectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  // Enhanced form styles
+  inputFieldContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#E65100',
+    marginBottom: 10,
+    marginLeft: 4,
+    textShadowColor: 'rgba(255, 107, 53, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  enhancedFormInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  enhancedTextArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  enhancedLevelButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
+    marginBottom: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  selectedEnhancedLevelButton: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  enhancedLevelButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
+  selectedEnhancedLevelButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  enhancedContactTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFFFFF',
+    marginRight: 12,
+    marginBottom: 8,
+    minWidth: 120,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  selectedEnhancedContactTypeButton: {
+    backgroundColor: '#FF6B35',
+  },
+  enhancedContactTypeButtonText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  selectedEnhancedContactTypeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  enhancedAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: '#FF6B35',
+    gap: 12,
+    marginTop: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  enhancedAddButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  enhancedAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  // Date row layout fixes
+  dateRowContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  dateFieldContainer: {
+    flex: 1,
+  },
+  // Enhanced form styling with colors
+  addFormHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    borderLeftWidth: 5,
+    borderLeftColor: '#FF6B35',
+    borderTopWidth: 1,
+    borderTopColor: '#FFE0B2',
+    borderRightWidth: 1,
+    borderRightColor: '#FFE0B2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0B2',
+  },
+  addFormTitle: {
+    fontWeight: '700',
+    color: '#E65100',
+    marginLeft: 12,
+    fontSize: 18,
+  },
+  enhancedFormInput: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  enhancedTextArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    backgroundColor: '#F8F9FA',
+  },
+  enhancedLevelButton: {
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#FFE0B2',
+    backgroundColor: '#FFFFFF',
+    marginRight: 10,
+    marginBottom: 10,
+    minWidth: 110,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  selectedEnhancedLevelButton: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOpacity: 0.3,
+  },
+  enhancedContactTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFF3E0',
+    marginRight: 14,
+    marginBottom: 10,
+    minWidth: 125,
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  selectedEnhancedContactTypeButton: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOpacity: 0.3,
+  },
+  enhancedAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 36,
+    borderRadius: 14,
+    backgroundColor: '#FF6B35',
+    gap: 14,
+    marginTop: 12,
+    elevation: 4,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+  },
+  enhancedAddButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+    borderColor: '#E0E0E0',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  // Enhanced profile picture styles
+  profilePictureSection: {
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  profilePictureContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  profileImageWrapper: {
+    position: 'relative',
+    borderRadius: 50,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    borderWidth: 3,
+    borderColor: '#FF6B35',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  uploadingText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  uploadHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

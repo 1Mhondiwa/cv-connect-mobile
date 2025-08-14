@@ -11,17 +11,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { register } from '../../store/slices/authSlice';
+import { resetPassword } from '../../store/slices/authSlice';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import CountryCodePicker from '../../components/CountryCodePicker';
 
-const RegisterScreen = ({ navigation }) => {
+const ResetPasswordScreen = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    countryCode: '+1',
-    phone: '',
+    token: route.params?.token || '',
     password: '',
     confirmPassword: '',
   });
@@ -32,11 +27,16 @@ const RegisterScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
 
-  const handleRegister = async () => {
-    const { first_name, last_name, email, countryCode, phone, password, confirmPassword } = formData;
+  const handleResetPassword = async () => {
+    const { token, password, confirmPassword } = formData;
     
-    if (!first_name || !last_name || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!token.trim()) {
+      Alert.alert('Error', 'Please enter the reset token from your email');
+      return;
+    }
+
+    if (!password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all password fields');
       return;
     }
 
@@ -72,19 +72,14 @@ const RegisterScreen = ({ navigation }) => {
     }
 
     try {
-      await dispatch(register({
-        first_name,
-        last_name,
-        email,
-        phone: `${countryCode}${phone}`,
-        password,
-      })).unwrap();
-      
-      Alert.alert('Success', 'Registration successful! Please check your email to verify your account.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') }
-      ]);
+      await dispatch(resetPassword({ token: token.trim(), password })).unwrap();
+      Alert.alert(
+        'Success', 
+        'Your password has been reset successfully!',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
     } catch (error) {
-      Alert.alert('Registration Failed', error || 'Please try again');
+      Alert.alert('Reset Failed', error || 'Please try again');
     }
   };
 
@@ -96,74 +91,32 @@ const RegisterScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join CV-Connect today</Text>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Enter your reset token and new password</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>First Name</Text>
+            <Text style={styles.label}>Reset Token</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your first name"
+              placeholder="Enter the token from your email"
               placeholderTextColor="#8B8B8B"
-              value={formData.first_name}
-              onChangeText={(text) => setFormData({...formData, first_name: text})}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your last name"
-              placeholderTextColor="#8B8B8B"
-              value={formData.last_name}
-              onChangeText={(text) => setFormData({...formData, last_name: text})}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor="#8B8B8B"
-              value={formData.email}
-              onChangeText={(text) => setFormData({...formData, email: text})}
-              keyboardType="email-address"
+              value={formData.token}
+              onChangeText={(text) => setFormData({...formData, token: text})}
               autoCapitalize="none"
               autoCorrect={false}
+              autoFocus
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.phoneInputContainer}>
-              <CountryCodePicker
-                selectedCode={formData.countryCode}
-                onSelectCode={(code) => setFormData({...formData, countryCode: code})}
-              />
-              <TextInput
-                style={styles.phoneInput}
-                placeholder="Enter your phone number"
-                placeholderTextColor="#8B8B8B"
-                value={formData.phone}
-                onChangeText={(text) => setFormData({...formData, phone: text})}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>New Password</Text>
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Enter your password"
+                placeholder="Enter your new password"
                 placeholderTextColor="#8B8B8B"
                 value={formData.password}
                 onChangeText={(text) => setFormData({...formData, password: text})}
@@ -177,7 +130,7 @@ const RegisterScreen = ({ navigation }) => {
                 <MaterialCommunityIcons
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={24}
-                  color="#8B4513"
+                  color="#8B8B8B"
                 />
               </TouchableOpacity>
             </View>
@@ -187,11 +140,11 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text style={styles.label}>Confirm New Password</Text>
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Confirm your password"
+                placeholder="Confirm your new password"
                 placeholderTextColor="#8B8B8B"
                 value={formData.confirmPassword}
                 onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
@@ -205,22 +158,20 @@ const RegisterScreen = ({ navigation }) => {
                 <MaterialCommunityIcons
                   name={showConfirmPassword ? 'eye-off' : 'eye'}
                   size={24}
-                  color="#8B4513"
+                  color="#8B8B8B"
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-
-
-          {/* Register Button */}
+          {/* Reset Password Button */}
           <TouchableOpacity
-            style={[styles.registerButton, isLoading && styles.disabledButton]}
-            onPress={handleRegister}
+            style={[styles.resetButton, isLoading && styles.disabledButton]}
+            onPress={handleResetPassword}
             disabled={isLoading}
           >
-            <Text style={styles.registerButtonText}>
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+            <Text style={styles.resetButtonText}>
+              {isLoading ? 'Resetting...' : 'Reset Password'}
             </Text>
           </TouchableOpacity>
 
@@ -229,9 +180,9 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{error}</Text>
           )}
 
-          {/* Login Link */}
+          {/* Back to Login Link */}
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={styles.loginText}>Remember your password? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
@@ -249,23 +200,26 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 30,
+    marginBottom: 40,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FF6B35',
-    marginBottom: 10,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#4A4A4A',
+    color: '#666',
     textAlign: 'center',
+    lineHeight: 22,
   },
   form: {
     flex: 1,
@@ -280,21 +234,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1A1A1A',
-    backgroundColor: '#F8F8F8',
-  },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  phoneInput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 12,
@@ -329,8 +268,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-
-  registerButton: {
+  resetButton: {
     backgroundColor: '#FF6B35',
     borderRadius: 12,
     paddingVertical: 16,
@@ -348,7 +286,7 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#BDBDBD',
   },
-  registerButtonText: {
+  resetButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
@@ -376,4 +314,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RegisterScreen; 
+export default ResetPasswordScreen;

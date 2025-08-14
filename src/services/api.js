@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Create axios instance
-const API_BASE_URL = 'http://192.168.101.164:5000/api'; // Your computer's IP address
+const API_BASE_URL = 'http://192.168.101.104:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -33,13 +33,32 @@ api.interceptors.request.use(
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Debug: Log successful responses
+    console.log('API Response:', response.status, response.config.url);
+    console.log('Response data:', response.data);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     // Network error
     if (!error.response) {
       console.error('Network Error:', error.message);
+      // Check if it's a connection refused error (wrong port/IP)
+      if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+        return Promise.reject({
+          ...error,
+          message: 'Cannot connect to server. Please check if the server is running.'
+        });
+      }
+      // Check if it's a timeout error
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        return Promise.reject({
+          ...error,
+          message: 'Request timed out. Please try again.'
+        });
+      }
       return Promise.reject({
         ...error,
         message: 'Network error. Please check your internet connection.'
@@ -197,10 +216,32 @@ export const associateAPI = {
   removeSaved: (freelancerId) => api.delete(`/associate/remove-saved/${freelancerId}`),
 };
 
+// Hiring API
+export const hiringAPI = {
+  getHiringHistory: (freelancerId) => api.get(`/hiring/freelancer/${freelancerId}/history`),
+  getCurrentHiring: (freelancerId) => api.get(`/hiring/freelancer/${freelancerId}/current`),
+  getHiringStats: (freelancerId) => api.get(`/hiring/freelancer/${freelancerId}/stats`),
+  respondToOffer: (hiringId, data) => api.put(`/hiring/${hiringId}/respond`, data),
+  updateHiringStatus: (hiringId, data) => api.put(`/hiring/${hiringId}/status`, data),
+};
+
 // Token management
 export const tokenService = {
   saveToken: async (token) => {
-    await SecureStore.setItemAsync('authToken', token);
+    // Validate token before saving
+    if (!token) {
+      throw new Error('Token is required');
+    }
+    
+    // Ensure token is a string
+    const tokenString = String(token);
+    
+    // Validate token format (basic JWT validation)
+    if (!tokenString.includes('.')) {
+      throw new Error('Invalid token format');
+    }
+    
+    await SecureStore.setItemAsync('authToken', tokenString);
   },
   getToken: async () => {
     return await SecureStore.getItemAsync('authToken');

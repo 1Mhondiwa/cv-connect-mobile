@@ -9,9 +9,30 @@ export const login = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await authAPI.login(credentials);
-      await tokenService.saveToken(response.data.token);
+      
+      // Debug: Log the response structure
+      console.log('Login response:', response);
+      console.log('Response data:', response.data);
+      console.log('Token:', response.data?.token);
+      
+      // Validate token before saving
+      if (!response.data?.token) {
+        console.error('No token received in response');
+        return rejectWithValue('No authentication token received from server');
+      }
+      
+      // Ensure token is a string
+      const token = String(response.data.token);
+      await tokenService.saveToken(token);
+      
       return response.data;
     } catch (error) {
+      // Handle network errors and other types of errors
+      if (!error.response) {
+        // Network error (no response from server)
+        return rejectWithValue(error.message || 'Network error. Please check your connection.');
+      }
+      // Server error with response
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
@@ -25,6 +46,30 @@ export const register = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed');
+    }
+  }
+);
+
+export const requestPasswordReset = createAsyncThunk(
+  'auth/requestPasswordReset',
+  async (emailData, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.requestPasswordReset(emailData.email);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to request password reset');
+    }
+  }
+);
+
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (resetData, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.resetPassword(resetData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to reset password');
     }
   }
 );
@@ -137,6 +182,32 @@ const authSlice = createSlice({
         state.userType = null;
         state.error = null;
         state.hasExplicitlyLoggedOut = true; // Mark that user has explicitly logged out
+      })
+      // Request Password Reset
+      .addCase(requestPasswordReset.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(requestPasswordReset.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(requestPasswordReset.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Reset Password
+      .addCase(resetPassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });

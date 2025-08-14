@@ -17,7 +17,7 @@ class SocketService {
         return;
       }
 
-      this.socket = io('http://192.168.101.164:5000', {
+      this.socket = io('http://192.168.101.104:5000', {
         auth: {
           token: token
         },

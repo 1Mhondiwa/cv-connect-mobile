@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, setToken, setUser } from '../../store/slices/authSlice';
 import { getProfile } from '../../store/slices/freelancerSlice';
 import { tokenService } from '../../services/api';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -87,15 +88,27 @@ const LoginScreen = ({ navigation }) => {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor="#8B8B8B"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor="#8B8B8B"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <MaterialCommunityIcons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="#8B4513"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Forgot Password */}
@@ -206,6 +219,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1A1A',
     backgroundColor: '#F8F8F8',
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  eyeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   forgotPassword: {
     alignSelf: 'flex-end',

@@ -7,7 +7,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 // Import screens
 import DashboardScreen from '../screens/freelancer/DashboardScreen';
 import ProfileScreen from '../screens/freelancer/ProfileScreen';
-import SearchScreen from '../screens/freelancer/SearchScreen';
+import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
+
 import MessagesScreen from '../screens/freelancer/MessagesScreen';
 import ChatScreen from '../screens/common/ChatScreen';
 
@@ -49,6 +50,41 @@ const MessagesStack = () => {
   );
 };
 
+// Profile Stack Navigator
+const ProfileStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#FF6B35',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen}
+        options={{
+          title: 'Profile',
+        }}
+      />
+      <Stack.Screen 
+        name="HiringHistory" 
+        component={HiringHistoryScreen}
+        options={{
+          title: 'Hiring History',
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 const FreelancerTabNavigator = () => {
   const theme = useTheme();
 
@@ -62,8 +98,6 @@ const FreelancerTabNavigator = () => {
             iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'account' : 'account-outline';
-          } else if (route.name === 'Search') {
-            iconName = focused ? 'magnify' : 'magnify';
           } else if (route.name === 'Messages') {
             iconName = focused ? 'message' : 'message-outline';
           }
@@ -112,13 +146,7 @@ const FreelancerTabNavigator = () => {
           title: 'Dashboard',
         }}
       />
-      <Tab.Screen 
-        name="Search" 
-        component={SearchScreen}
-        options={{
-          title: 'Find Jobs',
-        }}
-      />
+
       <Tab.Screen 
         name="Messages" 
         component={MessagesStack}
@@ -129,9 +157,10 @@ const FreelancerTabNavigator = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           title: 'Profile',
+          headerShown: false, // Hide header since ProfileStack has its own
         }}
       />
     </Tab.Navigator>
