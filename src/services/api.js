@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Create axios instance
-const API_BASE_URL = 'http://192.168.101.104:5000/api';
+const API_BASE_URL = 'http://10.254.121.136:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -166,7 +166,24 @@ export const profileAPI = {
   addSkill: (skillData) => api.post('/freelancer/skills', skillData),
   updateSkill: (skillId, skillData) => api.put(`/freelancer/skills/${skillId}`, skillData),
   deleteSkill: (skillId) => api.delete(`/freelancer/skills/${skillId}`),
+  
+  // Work Experience Management
+  addWorkExperience: (workData) => api.post('/freelancer/work-experience', workData),
+  updateWorkExperience: (workId, workData) => api.put(`/freelancer/work-experience/${workId}`, workData),
+  deleteWorkExperience: (workId) => api.delete(`/freelancer/work-experience/${workId}`),
+  
+  // Education Management
+  addEducation: (educationData) => api.post('/freelancer/education', educationData),
+  updateEducation: (educationId, educationData) => api.put(`/freelancer/education/${educationId}`, educationData),
+  deleteEducation: (educationId) => api.delete(`/freelancer/education/${educationId}`),
+  
+  // CV Parsed Data Management
+  updateCVParsedData: (parsedData) => api.put('/freelancer/cv/parsed-data', { parsed_data: parsedData }),
+  
   getDashboard: () => api.get('/freelancer/dashboard'),
+  getActivity: () => api.get('/freelancer/activity'),
+  getHiringStats: () => api.get('/freelancer/hiring/stats'),
+  getHiringHistory: () => api.get('/freelancer/hiring/history'),
 };
 
 // Search API
@@ -175,6 +192,7 @@ export const searchAPI = {
   getFreelancerDetails: (id) => api.get(`/search/freelancers/${id}`),
   searchBySkill: (skillId, params) => api.get(`/search/freelancers/by-skill/${skillId}`, { params }),
   getSkills: () => api.get('/search/skills'),
+  searchAssociates: (params) => api.get('/search/associates', { params }),
 };
 
 // Messages API

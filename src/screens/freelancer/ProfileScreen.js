@@ -21,6 +21,7 @@ const ProfileScreen = ({ navigation }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cvViewerVisible, setCvViewerVisible] = useState(false);
+  const [cvUploading, setCvUploading] = useState(false);
   const saveTimeoutRef = React.useRef(null);
   
   // Form state for editing
@@ -47,6 +48,10 @@ const ProfileScreen = ({ navigation }) => {
     year: '',
     description: ''
   });
+  
+  // Education editing state
+  const [editingEducation, setEditingEducation] = useState(null);
+  const [editingEducationData, setEditingEducationData] = useState({});
 
   // Work experience management
   const [workExperience, setWorkExperience] = useState([]);
@@ -57,6 +62,10 @@ const ProfileScreen = ({ navigation }) => {
     end_date: '',
     description: ''
   });
+  
+  // Work experience editing state
+  const [editingWork, setEditingWork] = useState(null);
+  const [editingWorkData, setEditingWorkData] = useState({});
 
   // Contact information management
   const [newContact, setNewContact] = useState({
@@ -114,10 +123,22 @@ const ProfileScreen = ({ navigation }) => {
       setSkills(allSkills);
       
       // Initialize education from CV-extracted education or existing education
-      setEducation(profile.education || []);
+      // Only update if we don't have local state or if this is the first load
+      if (education.length === 0) {
+        const cvEducation = profile.cv?.parsed_data?.education || [];
+        const backendEducation = profile.education || [];
+        console.log('Loading education data:', { cvEducation, backendEducation, combined: [...cvEducation, ...backendEducation] });
+        setEducation([...cvEducation, ...backendEducation]);
+      }
       
       // Initialize work experience from CV-extracted work experience
-      setWorkExperience(profile.work_experience || []);
+      // Only update if we don't have local state or if this is the first load
+      if (workExperience.length === 0) {
+        const cvWorkExperience = profile.cv?.parsed_data?.work_experience || [];
+        const backendWorkExperience = profile.work_experience || [];
+        console.log('Loading work experience data:', { cvWorkExperience, backendWorkExperience, combined: [...cvWorkExperience, ...backendWorkExperience] });
+        setWorkExperience([...cvWorkExperience, ...backendWorkExperience]);
+      }
     }
   }, [profile, user]);
 
@@ -141,13 +162,21 @@ const ProfileScreen = ({ navigation }) => {
       summary: profile.summary || ''
     });
     setSkills(profile.cv_skills || profile.skills || []);
-    setEducation(profile.education || []);
-    setWorkExperience(profile.work_experience || []);
+    const cvEducation = profile.cv?.parsed_data?.education || [];
+    const backendEducation = profile.education || [];
+    setEducation([...cvEducation, ...backendEducation]);
+    const cvWorkExperience = profile.cv?.parsed_data?.work_experience || [];
+    const backendWorkExperience = profile.work_experience || [];
+    setWorkExperience([...cvWorkExperience, ...backendWorkExperience]);
     setNewSkill('');
     setNewSkillLevel('Proficient');
     setNewEducation({ degree: '', institution: '', year: '', description: '' });
     setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
     setNewContact({ type: 'phone', value: '' });
+    setEditingEducation(null);
+    setEditingEducationData({});
+    setEditingWork(null);
+    setEditingWorkData({});
     setIsEditing(false);
   };
 
@@ -183,8 +212,15 @@ const ProfileScreen = ({ navigation }) => {
             });
           }
           
-          // Note: For now, we'll only add skills. Deleting skills would require more complex logic
-          // to identify which skills were removed and call the delete API
+          // Update CV parsed data to sync all changes
+          try {
+            await profileAPI.updateCVParsedData({
+              work_experience: workExperience,
+              education: education
+            });
+          } catch (cvError) {
+            console.warn('Failed to update CV parsed data:', cvError);
+          }
           
           Alert.alert('Success', 'Profile and skills updated successfully!');
           setIsEditing(false);
@@ -400,17 +436,32 @@ const ProfileScreen = ({ navigation }) => {
     if (newEducation.degree.trim() && newEducation.institution.trim()) {
       try {
         // Add to local state immediately for UI feedback
-        const newEducationObj = { ...newEducation };
+        const newEducationObj = { 
+          ...newEducation,
+          id: `edu_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
         setEducation(prev => [...prev, newEducationObj]);
         setNewEducation({ degree: '', institution: '', year: '', description: '' });
         
-        // Save to backend via profile update
-        const updatedProfile = {
-          ...formData,
-          education: [...education, newEducationObj]
+        // Save to backend using dedicated education endpoint
+        const educationData = {
+          degree: newEducationObj.degree.trim(),
+          institution: newEducationObj.institution.trim(),
+          year: newEducationObj.year || '',
+          description: newEducationObj.description || ''
         };
         
-        await dispatch(updateProfile(updatedProfile)).unwrap();
+        await profileAPI.addEducation(educationData);
+        
+        // Update CV parsed data to sync with backend
+        try {
+          const updatedEducation = [...education, newEducationObj];
+          await profileAPI.updateCVParsedData({
+            education: updatedEducation
+          });
+        } catch (cvError) {
+          console.warn('Failed to update CV parsed data:', cvError);
+        }
         
         // Show success message
         Alert.alert('Success', `Education "${newEducationObj.degree}" added successfully!`);
@@ -435,13 +486,20 @@ const ProfileScreen = ({ navigation }) => {
       // Remove from local state immediately for UI feedback
       setEducation(prev => prev.filter((_, i) => i !== index));
       
-      // Save to backend via profile update
-      const updatedProfile = {
-        ...formData,
-        education: education.filter((_, i) => i !== index)
-      };
+      // If it's a backend education (has ID), delete from backend
+      if (educationToRemove.id) {
+        await profileAPI.deleteEducation(educationToRemove.id);
+      }
       
-      await dispatch(updateProfile(updatedProfile)).unwrap();
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedEducation = education.filter((_, i) => i !== index);
+        await profileAPI.updateCVParsedData({
+          education: updatedEducation
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
       
       // Show success message
       Alert.alert('Success', `Education "${educationToRemove.degree}" removed successfully!`);
@@ -456,6 +514,68 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  // Start editing education
+  const startEditingEducation = (edu) => {
+    setEditingEducation(edu.id);
+    setEditingEducationData({
+      degree: edu.degree || edu.title || '',
+      institution: edu.institution || edu.school || '',
+      year: edu.year || edu.graduation_year || '',
+      description: edu.description || ''
+    });
+  };
+
+  // Cancel editing education
+  const cancelEditingEducation = () => {
+    setEditingEducation(null);
+    setEditingEducationData({});
+  };
+
+  // Update education
+  const handleUpdateEducation = async () => {
+    if (!editingEducationData.degree.trim() || !editingEducationData.institution.trim()) {
+      Alert.alert('Required Fields', 'Degree and institution are required.');
+      return;
+    }
+
+    try {
+      // Update local state immediately for UI feedback
+      setEducation(prev => prev.map(edu => 
+        edu.id === editingEducation ? { ...edu, ...editingEducationData } : edu
+      ));
+      
+      // Update in backend if it has an ID
+      if (editingEducation) {
+        await profileAPI.updateEducation(editingEducation, editingEducationData);
+      }
+      
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedEducation = education.map(edu => 
+          edu.id === editingEducation ? { ...edu, ...editingEducationData } : edu
+        );
+        await profileAPI.updateCVParsedData({
+          education: updatedEducation
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
+      
+      // Show success message
+      Alert.alert('Success', 'Education updated successfully!');
+      
+      // Exit editing mode
+      setEditingEducation(null);
+      setEditingEducationData({});
+      
+      // Refresh profile data
+      dispatch(getProfile());
+    } catch (error) {
+      console.error('Error updating education:', error);
+      Alert.alert('Error', 'Failed to update education. Please try again.');
+    }
+  };
+
   const editEducation = async (index, field, value) => {
     const oldEducation = education[index];
     
@@ -465,17 +585,26 @@ const ProfileScreen = ({ navigation }) => {
         i === index ? { ...edu, [field]: value } : edu
       ));
       
-      // Save to backend via profile update
-      const updatedEducation = education.map((edu, i) => 
-        i === index ? { ...edu, [field]: value } : edu
-      );
+      // If it's a backend education (has ID), update in backend
+      if (oldEducation.id) {
+        const updatedEducationData = {
+          ...oldEducation,
+          [field]: value
+        };
+        await profileAPI.updateEducation(oldEducation.id, updatedEducationData);
+      }
       
-      const updatedProfile = {
-        ...formData,
-        education: updatedEducation
-      };
-      
-      await dispatch(updateProfile(updatedProfile)).unwrap();
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedEducation = education.map((edu, i) => 
+          i === index ? { ...edu, [field]: value } : edu
+        );
+        await profileAPI.updateCVParsedData({
+          education: updatedEducation
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
       
       // Show success message
       Alert.alert('Success', `Education "${oldEducation.degree}" updated successfully!`);
@@ -497,17 +626,33 @@ const ProfileScreen = ({ navigation }) => {
     if (newWorkExperience.title.trim() && newWorkExperience.company.trim()) {
       try {
         // Add to local state immediately for UI feedback
-        const newWorkExpObj = { ...newWorkExperience };
+        const newWorkExpObj = { 
+          ...newWorkExperience,
+          id: `work_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
         setWorkExperience(prev => [...prev, newWorkExpObj]);
         setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
         
-        // Save to backend via profile update
-        const updatedProfile = {
-          ...formData,
-          work_experience: [...workExperience, newWorkExpObj]
+        // Save to backend using dedicated work experience endpoint
+        const workData = {
+          title: newWorkExpObj.title.trim(),
+          company: newWorkExpObj.company.trim(),
+          start_date: newWorkExpObj.start_date || '',
+          end_date: newWorkExpObj.end_date || '',
+          description: newWorkExpObj.description || ''
         };
         
-        await dispatch(updateProfile(updatedProfile)).unwrap();
+        await profileAPI.addWorkExperience(workData);
+        
+        // Update CV parsed data to sync with backend
+        try {
+          const updatedWorkExp = [...workExperience, newWorkExpObj];
+          await profileAPI.updateCVParsedData({
+            work_experience: updatedWorkExp
+          });
+        } catch (cvError) {
+          console.warn('Failed to update CV parsed data:', cvError);
+        }
         
         // Show success message
         Alert.alert('Success', `Work experience "${newWorkExpObj.title}" added successfully!`);
@@ -532,13 +677,20 @@ const ProfileScreen = ({ navigation }) => {
       // Remove from local state immediately for UI feedback
       setWorkExperience(prev => prev.filter((_, i) => i !== index));
       
-      // Save to backend via profile update
-      const updatedProfile = {
-        ...formData,
-        work_experience: workExperience.filter((_, i) => i !== index)
-      };
+      // If it's a backend work experience (has ID), delete from backend
+      if (workExpToRemove.id) {
+        await profileAPI.deleteWorkExperience(workExpToRemove.id);
+      }
       
-      await dispatch(updateProfile(updatedProfile)).unwrap();
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedWorkExp = workExperience.filter((_, i) => i !== index);
+        await profileAPI.updateCVParsedData({
+          work_experience: updatedWorkExp
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
       
       // Show success message
       Alert.alert('Success', `Work experience "${workExpToRemove.title}" removed successfully!`);
@@ -553,6 +705,69 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  // Start editing work experience
+  const startEditingWork = (work) => {
+    setEditingWork(work.id);
+    setEditingWorkData({
+      title: work.title || work.position || '',
+      company: work.company || work.employer || '',
+      start_date: work.start_date || '',
+      end_date: work.end_date || '',
+      description: work.description || work.responsibilities || ''
+    });
+  };
+
+  // Cancel editing work experience
+  const cancelEditingWork = () => {
+    setEditingWork(null);
+    setEditingWorkData({});
+  };
+
+  // Update work experience
+  const handleUpdateWork = async () => {
+    if (!editingWorkData.title.trim() || !editingWorkData.company.trim()) {
+      Alert.alert('Required Fields', 'Job title and company are required.');
+      return;
+    }
+
+    try {
+      // Update local state immediately for UI feedback
+      setWorkExperience(prev => prev.map(exp => 
+        exp.id === editingWork ? { ...exp, ...editingWorkData } : exp
+      ));
+      
+      // Update in backend if it has an ID
+      if (editingWork) {
+        await profileAPI.updateWorkExperience(editingWork, editingWorkData);
+      }
+      
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedWorkExp = workExperience.map(exp => 
+          exp.id === editingWork ? { ...exp, ...editingWorkData } : exp
+        );
+        await profileAPI.updateCVParsedData({
+          work_experience: updatedWorkExp
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
+      
+      // Show success message
+      Alert.alert('Success', 'Work experience updated successfully!');
+      
+      // Exit editing mode
+      setEditingWork(null);
+      setEditingWorkData({});
+      
+      // Refresh profile data
+      dispatch(getProfile());
+    } catch (error) {
+      console.error('Error updating work experience:', error);
+      Alert.alert('Error', 'Failed to update work experience. Please try again.');
+    }
+  };
+
   const editWorkExperience = async (index, field, value) => {
     const oldWorkExp = workExperience[index];
     
@@ -562,17 +777,26 @@ const ProfileScreen = ({ navigation }) => {
         i === index ? { ...exp, [field]: value } : exp
       ));
       
-      // Save to backend via profile update
-      const updatedWorkExp = workExperience.map((exp, i) => 
-        i === index ? { ...exp, [field]: value } : exp
-      );
+      // If it's a backend work experience (has ID), update in backend
+      if (oldWorkExp.id) {
+        const updatedWorkData = {
+          ...oldWorkExp,
+          [field]: value
+        };
+        await profileAPI.updateWorkExperience(oldWorkExp.id, updatedWorkData);
+      }
       
-      const updatedProfile = {
-        ...formData,
-        work_experience: updatedWorkExp
-      };
-      
-      await dispatch(updateProfile(updatedProfile)).unwrap();
+      // Update CV parsed data to sync with backend
+      try {
+        const updatedWorkExp = workExperience.map((exp, i) => 
+          i === index ? { ...exp, [field]: value } : exp
+        );
+        await profileAPI.updateCVParsedData({
+          work_experience: updatedWorkExp
+        });
+      } catch (cvError) {
+        console.warn('Failed to update CV parsed data:', cvError);
+      }
       
       // Show success message
       Alert.alert('Success', `Work experience "${oldWorkExp.title}" updated successfully!`);
@@ -739,35 +963,100 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleUploadCV = async () => {
     try {
+      // Show file picker with supported formats
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'text/plain'
+        ],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const formData = new FormData();
-        formData.append('cv', {
-          uri: result.assets[0].uri,
-          type: result.assets[0].mimeType || 'application/pdf',
-          name: result.assets[0].name,
-        });
-
-        try {
-          const response = await profileAPI.uploadCV(formData);
-          if (response.success) {
-            dispatch(getProfile());
-            showToast('CV uploaded successfully!', 'success');
-          } else {
-            showToast(response.message || 'Failed to upload CV', 'error');
-          }
-        } catch (error) {
-          console.error('Error uploading CV:', error);
-          showToast('Failed to upload CV', 'error');
+        const selectedFile = result.assets[0];
+        
+        // Validate file size (5MB limit)
+        const fileSizeMB = selectedFile.size / (1024 * 1024);
+        if (fileSizeMB > 5) {
+          Alert.alert(
+            'File Too Large',
+            'Please select a file smaller than 5MB. Your file is ' + fileSizeMB.toFixed(2) + 'MB.',
+            [{ text: 'OK' }]
+          );
+          return;
         }
+
+        // Show confirmation dialog
+        Alert.alert(
+          'Upload CV',
+          `Are you sure you want to upload "${selectedFile.name}"?\n\nThis will replace your current CV if one exists.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upload',
+              onPress: async () => {
+                setCvUploading(true);
+                
+                const formData = new FormData();
+                formData.append('cv', {
+                  uri: selectedFile.uri,
+                  type: selectedFile.mimeType || 'application/pdf',
+                  name: selectedFile.name,
+                });
+
+                try {
+                  const response = await profileAPI.uploadCV(formData);
+                  
+                  // Check if the response has the expected structure
+                  if (response.data && response.data.success) {
+                    // Show success message
+                    Alert.alert(
+                      'Success!',
+                      'CV uploaded and processed successfully. Your profile has been updated with the new information.',
+                      [
+                        {
+                          text: 'OK',
+                          onPress: () => {
+                            // Refresh profile data to show the new CV information
+                            dispatch(getProfile());
+                          }
+                        }
+                      ]
+                    );
+                  } else {
+                    // Handle case where response structure is different
+                    const message = response.data?.message || response.message || 'CV uploaded successfully';
+                    Alert.alert('Success', message);
+                    dispatch(getProfile());
+                  }
+                } catch (error) {
+                  console.error('Error uploading CV:', error);
+                  
+                  // Provide more detailed error information
+                  let errorMessage = 'Failed to upload CV. Please try again.';
+                  
+                  if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                  } else if (error.response?.data?.error) {
+                    errorMessage = error.response.data.error;
+                  } else if (error.message) {
+                    errorMessage = error.message;
+                  }
+                  
+                  Alert.alert('Upload Failed', errorMessage);
+                } finally {
+                  setCvUploading(false);
+                }
+              }
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error accessing document picker:', error);
-      showToast('Failed to access document picker', 'error');
+      Alert.alert('Error', 'Failed to access document picker. Please try again.');
     }
   };
 
@@ -778,6 +1067,9 @@ const ProfileScreen = ({ navigation }) => {
     }
 
     try {
+      console.log('Opening CV viewer for file:', profile.cv.stored_filename);
+      console.log('CV URL will be:', `http://10.254.121.136:5000/cv/${profile.cv.stored_filename}`);
+      
       // Show the CV viewer modal
       setCvViewerVisible(true);
       
@@ -861,7 +1153,14 @@ const ProfileScreen = ({ navigation }) => {
 
   const renderEducation = () => {
     // Use education from local state when editing, otherwise use profile data
-    const currentEducation = isEditing ? education : (profile?.education || []);
+    const currentEducation = isEditing ? education : (profile?.cv?.parsed_data?.education || profile?.education || []);
+    console.log('Rendering education with data:', { 
+      isEditing, 
+      localEducation: education, 
+      cvEducation: profile?.cv?.parsed_data?.education, 
+      backendEducation: profile?.education,
+      currentEducation 
+    });
     
     return (
       <Card style={styles.sectionCard} elevation={2}>
@@ -876,9 +1175,72 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.educationList}>
               {currentEducation.map((edu, index) => (
                 <View key={index} style={styles.educationItem}>
-                  <Text style={styles.educationDegree}>{edu.degree || edu.title}</Text>
-                  <Text style={styles.educationInstitution}>{edu.institution || edu.school}</Text>
-                  <Text style={styles.educationYear}>{edu.year || edu.graduation_year}</Text>
+                  {editingEducation === edu.id ? (
+                    // Editing mode
+                    <View style={styles.editingEducationForm}>
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingEducationData.degree}
+                        onChangeText={(text) => setEditingEducationData({ ...editingEducationData, degree: text })}
+                        placeholder="Degree"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingEducationData.institution}
+                        onChangeText={(text) => setEditingEducationData({ ...editingEducationData, institution: text })}
+                        placeholder="Institution"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingEducationData.year}
+                        onChangeText={(text) => setEditingEducationData({ ...editingEducationData, year: text })}
+                        placeholder="Year"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingEducationData.description}
+                        onChangeText={(text) => setEditingEducationData({ ...editingEducationData, description: text })}
+                        placeholder="Description"
+                        multiline
+                      />
+                      <View style={styles.editingButtons}>
+                        <TouchableOpacity style={styles.saveButton} onPress={handleUpdateEducation}>
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cancelButton} onPress={cancelEditingEducation}>
+                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    // Display mode
+                    <View style={styles.educationDisplay}>
+                      <Text style={styles.educationDegree}>{edu.degree || edu.title}</Text>
+                      <Text style={styles.educationInstitution}>{edu.institution || edu.school}</Text>
+                      <Text style={styles.educationYear}>{edu.year || edu.graduation_year}</Text>
+                      {edu.description && (
+                        <Text style={styles.educationDescription}>{edu.description}</Text>
+                      )}
+                      {isEditing && (
+                        <View style={styles.educationActions}>
+                          <TouchableOpacity 
+                            style={styles.editButton} 
+                            onPress={() => startEditingEducation(edu)}
+                          >
+                            <MaterialCommunityIcons name="pencil" size={16} color="#FF6B35" />
+                            <Text style={styles.editButtonText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.deleteButton} 
+                            onPress={() => removeEducation(index)}
+                          >
+                            <MaterialCommunityIcons name="delete" size={16} color="#EF4444" />
+                            <Text style={styles.deleteButtonText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -911,7 +1273,14 @@ const ProfileScreen = ({ navigation }) => {
 
   const renderWorkExperience = () => {
     // Use work experience from local state when editing, otherwise use profile data
-    const currentWorkExperience = isEditing ? workExperience : (profile?.work_experience || []);
+    const currentWorkExperience = isEditing ? workExperience : (profile?.cv?.parsed_data?.work_experience || profile?.work_experience || []);
+    console.log('Rendering work experience with data:', { 
+      isEditing, 
+      localWorkExperience: workExperience, 
+      cvWorkExperience: profile?.cv?.parsed_data?.work_experience, 
+      backendWorkExperience: profile?.work_experience,
+      currentWorkExperience 
+    });
     
     return (
       <Card style={styles.sectionCard} elevation={2}>
@@ -926,10 +1295,76 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.experienceList}>
               {currentWorkExperience.map((exp, index) => (
                 <View key={index} style={styles.experienceItem}>
-                  <Text style={styles.experienceTitle}>{exp.title || exp.position}</Text>
-                  <Text style={styles.experienceCompany}>{exp.company || exp.employer}</Text>
-                  <Text style={styles.experienceDuration}>{exp.duration || `${exp.start_date} - ${exp.end_date || 'Present'}`}</Text>
-                  <Text style={styles.experienceDescription}>{exp.description || exp.responsibilities}</Text>
+                  {editingWork === exp.id ? (
+                    // Editing mode
+                    <View style={styles.editingWorkForm}>
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingWorkData.title}
+                        onChangeText={(text) => setEditingWorkData({ ...editingWorkData, title: text })}
+                        placeholder="Job Title"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingWorkData.company}
+                        onChangeText={(text) => setEditingWorkData({ ...editingWorkData, company: text })}
+                        placeholder="Company"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingWorkData.start_date}
+                        onChangeText={(text) => setEditingWorkData({ ...editingWorkData, start_date: text })}
+                        placeholder="Start Date"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingWorkData.end_date}
+                        onChangeText={(text) => setEditingWorkData({ ...editingWorkData, end_date: text })}
+                        placeholder="End Date"
+                      />
+                      <TextInput
+                        style={styles.editingInput}
+                        value={editingWorkData.description}
+                        onChangeText={(text) => setEditingWorkData({ ...editingWorkData, description: text })}
+                        placeholder="Description"
+                        multiline
+                      />
+                      <View style={styles.editingButtons}>
+                        <TouchableOpacity style={styles.saveButton} onPress={handleUpdateWork}>
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cancelButton} onPress={cancelEditingWork}>
+                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    // Display mode
+                    <View style={styles.experienceDisplay}>
+                      <Text style={styles.experienceTitle}>{exp.title || exp.position}</Text>
+                      <Text style={styles.experienceCompany}>{exp.company || exp.employer}</Text>
+                      <Text style={styles.experienceDuration}>{exp.duration || `${exp.start_date} - ${exp.end_date || 'Present'}`}</Text>
+                      <Text style={styles.experienceDescription}>{exp.description || exp.responsibilities}</Text>
+                      {isEditing && (
+                        <View style={styles.experienceActions}>
+                          <TouchableOpacity 
+                            style={styles.editButton} 
+                            onPress={() => startEditingWork(exp)}
+                          >
+                            <MaterialCommunityIcons name="pencil" size={16} color="#FF6B35" />
+                            <Text style={styles.editButtonText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.deleteButton} 
+                            onPress={() => removeWorkExperience(index)}
+                          >
+                            <MaterialCommunityIcons name="delete" size={16} color="#EF4444" />
+                            <Text style={styles.deleteButtonText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -1660,56 +2095,60 @@ const ProfileScreen = ({ navigation }) => {
         </Card>
       )}
 
-      {/* Contact Information */}
-      <Card style={styles.sectionCard} elevation={2}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Contact Information
-          </Text>
-          <View style={styles.contactList}>
-            {profile?.phone && (
-              <View style={styles.contactItem}>
-                <IconButton icon="phone" size={20} iconColor="#8B4513" />
-                <Text style={styles.contactText}>{profile.phone}</Text>
-      </View>
-            )}
-            {profile?.email && (
-              <View style={styles.contactItem}>
-                <IconButton icon="email" size={20} iconColor="#8B4513" />
-                <Text style={styles.contactText}>{profile.email}</Text>
-              </View>
-            )}
-            {profile?.linkedin_url && (
-              <View style={styles.contactItem}>
-                <IconButton icon="linkedin" size={20} iconColor="#8B4513" />
-                <Text style={styles.contactText}>{profile.linkedin_url}</Text>
-              </View>
-            )}
-            {profile?.github_url && (
-              <View style={styles.contactItem}>
-                <IconButton icon="github" size={20} iconColor="#8B4513" />
-                <Text style={styles.contactText}>{profile.github_url}</Text>
-              </View>
-            )}
-          </View>
-        </Card.Content>
-      </Card>
+      {/* Contact Information - Only show when NOT editing */}
+      {!isEditing && (
+        <Card style={styles.sectionCard} elevation={2}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Contact Information
+            </Text>
+            <View style={styles.contactList}>
+              {profile?.phone && (
+                <View style={styles.contactItem}>
+                  <IconButton icon="phone" size={20} iconColor="#8B4513" />
+                  <Text style={styles.contactText}>{profile.phone}</Text>
+                </View>
+              )}
+              {profile?.email && (
+                <View style={styles.contactItem}>
+                  <IconButton icon="email" size={20} iconColor="#8B4513" />
+                  <Text style={styles.contactText}>{profile.email}</Text>
+                </View>
+              )}
+              {profile?.linkedin_url && (
+                <View style={styles.contactItem}>
+                  <IconButton icon="linkedin" size={20} iconColor="#8B4513" />
+                  <Text style={styles.contactText}>{profile.linkedin_url}</Text>
+                </View>
+              )}
+              {profile?.github_url && (
+                <View style={styles.contactItem}>
+                  <IconButton icon="github" size={20} iconColor="#8B4513" />
+                  <Text style={styles.contactText}>{profile.github_url}</Text>
+                </View>
+              )}
+            </View>
+          </Card.Content>
+        </Card>
+      )}
 
-      {/* Skills Section */}
-      <Card style={styles.sectionCard} elevation={2}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Skills ({isEditing ? skills.length : ((profile?.skills || []).length + (profile?.cv_skills || []).length)})
-          </Text>
-          {renderSkills()}
-        </Card.Content>
-      </Card>
+      {/* Skills Section - Only show when NOT editing */}
+      {!isEditing && (
+        <Card style={styles.sectionCard} elevation={2}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Skills ({((profile?.skills || []).length + (profile?.cv_skills || []).length)})
+            </Text>
+            {renderSkills()}
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Education Section */}
       <Card style={styles.sectionCard} elevation={2}>
         <Card.Content>
           <Text variant="titleMedium" style={styles.sectionTitle}>
-            Education ({isEditing ? education.length : (profile?.education || []).length})
+            Education ({isEditing ? education.length : (profile?.cv?.parsed_data?.education || profile?.education || []).length})
           </Text>
           {renderEducation()}
         </Card.Content>
@@ -1719,7 +2158,7 @@ const ProfileScreen = ({ navigation }) => {
       <Card style={styles.sectionCard} elevation={2}>
         <Card.Content>
                      <Text variant="titleMedium" style={styles.sectionTitle}>
-             Work Experience ({isEditing ? workExperience.length : (profile?.work_experience?.length || 0)})
+             Work Experience ({isEditing ? workExperience.length : (profile?.cv?.parsed_data?.work_experience || profile?.work_experience || []).length})
            </Text>
           {renderWorkExperience()}
         </Card.Content>
@@ -1736,6 +2175,9 @@ const ProfileScreen = ({ navigation }) => {
               <Text style={styles.cvText}>File: {profile.cv.original_filename}</Text>
               <Text style={styles.cvText}>Size: {(profile.cv.file_size / 1024 / 1024).toFixed(2)} MB</Text>
               <Text style={styles.cvText}>Status: {profile.cv.parsing_status}</Text>
+              <Text style={styles.cvFormatNote}>
+                Supported formats: PDF, DOCX, DOC, TXT (max 5MB)
+              </Text>
             </View>
             <View style={styles.cvButtonsContainer}>
               <Button
@@ -1752,9 +2194,11 @@ const ProfileScreen = ({ navigation }) => {
                 onPress={handleUploadCV}
                 style={[styles.cvButton, styles.uploadCVButton]}
                 contentStyle={styles.cvButtonContent}
-                icon="upload"
+                icon={cvUploading ? "loading" : "upload"}
+                disabled={cvUploading}
+                loading={cvUploading}
               >
-                Replace CV
+                {cvUploading ? 'Uploading...' : 'Replace CV'}
               </Button>
 
             </View>
@@ -1768,14 +2212,19 @@ const ProfileScreen = ({ navigation }) => {
             </Text>
             <View style={styles.cvUploadContainer}>
               <Text style={styles.cvUploadText}>No CV uploaded yet</Text>
+              <Text style={styles.cvFormatNote}>
+                Supported formats: PDF, DOCX, DOC, TXT (max 5MB)
+              </Text>
               <Button
                 mode="contained"
                 onPress={handleUploadCV}
                 style={[styles.cvButton, styles.uploadCVButton]}
                 contentStyle={styles.cvButtonContent}
-                icon="upload"
+                icon={cvUploading ? "loading" : "upload"}
+                disabled={cvUploading}
+                loading={cvUploading}
               >
-                Upload CV
+                {cvUploading ? 'Uploading...' : 'Upload CV'}
               </Button>
             </View>
           </Card.Content>
@@ -1787,7 +2236,7 @@ const ProfileScreen = ({ navigation }) => {
         <CVViewer
           visible={cvViewerVisible}
           onClose={() => setCvViewerVisible(false)}
-          cvUrl={`http://192.168.101.104:5000/cv/${profile.cv.stored_filename}`}
+                      cvUrl={`http://10.254.121.136:5000/cv/${profile.cv.stored_filename}`}
           cvFilename={profile?.cv?.original_filename || 'CV'}
           cvData={profile?.cv}
         />
@@ -1981,12 +2430,124 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 16,
   },
+  
+  // Editing form styles
+  editingEducationForm: {
+    gap: 8,
+  },
+  editingWorkForm: {
+    gap: 8,
+  },
+  editingInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  editingButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#6B7280',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // Display mode styles
+  educationDisplay: {
+    gap: 4,
+  },
+  experienceDisplay: {
+    gap: 4,
+  },
+  educationDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  
+  // Action buttons styles
+  educationActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  experienceActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  editButtonText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  deleteButtonText: {
+    fontSize: 12,
+    color: '#991B1B',
+    fontWeight: '500',
+  },
   cvInfo: {
     gap: 4,
   },
   cvText: {
     fontSize: 12,
     color: '#666',
+  },
+  cvFormatNote: {
+    fontSize: 11,
+    color: '#8B4513',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   emptySection: {
     alignItems: 'center',

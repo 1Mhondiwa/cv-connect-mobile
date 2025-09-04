@@ -5,281 +5,150 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
-import { Card, Surface, IconButton } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
-import { hiringAPI } from '../../services/api';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Card, Surface } from 'react-native-paper';
+
+import { profileAPI } from '../../services/api';
+
+// Import responsive utilities
+import { 
+  scale, 
+  verticalScale, 
+  fontSize, 
+  spacing, 
+  borderRadius, 
+  responsive,
+} from '../../utils/responsive';
 
 const HiringHistoryScreen = ({ navigation }) => {
-  const [hiringHistory, setHiringHistory] = useState([]);
-  const [currentHiring, setCurrentHiring] = useState(null);
-  const [hiringStats, setHiringStats] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
   const { user } = useSelector((state) => state.auth);
-  const { profile } = useSelector((state) => state.freelancer);
+  const [hiringHistory, setHiringHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchHiringData();
+    fetchHiringHistory();
   }, []);
 
-  const fetchHiringData = async () => {
+  const fetchHiringHistory = async () => {
     try {
-      setIsLoading(true);
-      const [historyRes, currentRes, statsRes] = await Promise.all([
-        hiringAPI.getHiringHistory(user.user_id),
-        hiringAPI.getCurrentHiring(user.user_id),
-        hiringAPI.getHiringStats(user.user_id)
-      ]);
-
-      // Ensure we always have arrays/objects, even if API returns unexpected data
-      setHiringHistory(Array.isArray(historyRes.data) ? historyRes.data : []);
-      setCurrentHiring(currentRes.data || null);
-      setHiringStats(statsRes.data || {});
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔍 Fetching hiring history for freelancer...');
+      const response = await profileAPI.getHiringHistory();
+      
+      if (response.data.success) {
+        setHiringHistory(response.data.hiring_history);
+        console.log('✅ Hiring history fetched:', response.data.hiring_history);
+      } else {
+        setError('Failed to fetch hiring history');
+        console.error('❌ API returned success: false');
+      }
     } catch (error) {
-      console.error('Error fetching hiring data:', error);
-      // Set default empty values instead of showing error alert
-      setHiringHistory([]);
-      setCurrentHiring(null);
-      setHiringStats({});
+      console.error('❌ Error fetching hiring history:', error);
+      setError('Failed to load hiring history. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchHiringData();
+    await fetchHiringHistory();
     setRefreshing(false);
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'offered': return '#FFA500';
-      case 'accepted': return '#10B981';
-      case 'active': return '#3B82F6';
-      case 'completed': return '#059669';
-      case 'terminated': return '#DC2626';
-      case 'rejected': return '#EF4444';
-      default: return '#6B7280';
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return '#10B981'; // Green
+      case 'completed':
+        return '#059652'; // Dark green
+      case 'cancelled':
+        return '#EF4444'; // Red
+      case 'on_hold':
+        return '#F59E0B'; // Yellow
+      default:
+        return '#6B7280'; // Gray
     }
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case 'offered': return 'Offer Received';
-      case 'accepted': return 'Accepted';
-      case 'active': return 'Currently Working';
-      case 'completed': return 'Completed';
-      case 'terminated': return 'Terminated';
-      case 'rejected': return 'Rejected';
-      default: return status;
-    }
+    if (!status) return 'Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
-  const formatCurrency = (amount, currency = 'ZAR') => {
+  const formatCurrency = (amount, rateType) => {
     if (!amount) return 'N/A';
-    return `${currency} ${amount.toLocaleString()}`;
+    return `$${amount} (${rateType || 'hourly'})`;
   };
 
-  const handleRespondToOffer = async (hiringId, response) => {
-    try {
-      await hiringAPI.respondToOffer(hiringId, { response });
-      Alert.alert('Success', `Offer ${response} successfully`);
-      fetchHiringData(); // Refresh data
-    } catch (error) {
-      Alert.alert('Error', `Failed to ${response} offer`);
+  const openWebsite = (url) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      Linking.openURL(url);
     }
   };
 
-  const renderCurrentHiring = () => {
-    if (!currentHiring) return null;
-
-    return (
-      <Card style={styles.currentHiringCard} elevation={3}>
-        <Card.Content>
-          <View style={styles.currentHiringHeader}>
-            <MaterialCommunityIcons 
-              name="briefcase" 
-              size={24} 
-              color="#FF6B35" 
-            />
-            <Text style={styles.currentHiringTitle}>Current Position</Text>
-          </View>
-          
-          <Text style={styles.positionTitle}>{currentHiring.position_title}</Text>
-          <Text style={styles.associateInfo}>
-            {currentHiring.associate_contact} • {currentHiring.associate_industry}
-          </Text>
-          
-          <View style={styles.currentHiringDetails}>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Status:</Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(currentHiring.status) }]}>
-                <Text style={styles.statusBadgeText}>
-                  {getStatusText(currentHiring.status)}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Salary:</Text>
-              <Text style={styles.detailValue}>
-                {formatCurrency(currentHiring.salary_amount, currentHiring.salary_currency)}
-              </Text>
-            </View>
-            
-            {currentHiring.start_date && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Start Date:</Text>
-                <Text style={styles.detailValue}>{formatDate(currentHiring.start_date)}</Text>
-              </View>
-            )}
-          </View>
-
-          {currentHiring.status === 'offered' && (
-            <View style={styles.offerActions}>
-              <TouchableOpacity
-                style={[styles.offerButton, styles.acceptButton]}
-                onPress={() => handleRespondToOffer(currentHiring.hiring_id, 'accepted')}
-              >
-                <Text style={styles.offerButtonText}>Accept Offer</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.offerButton, styles.rejectButton]}
-                onPress={() => handleRespondToOffer(currentHiring.hiring_id, 'rejected')}
-              >
-                <Text style={styles.offerButtonText}>Decline Offer</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </Card.Content>
-      </Card>
-    );
+  const openPhone = (phone) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    }
   };
 
-  const renderHiringStats = () => {
-    return (
-      <View style={styles.statsContainer}>
-        <Text style={styles.sectionTitle}>Hiring Statistics</Text>
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard} elevation={2}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>{hiringStats.total_hirings || 0}</Text>
-              <Text style={styles.statLabel}>Total Positions</Text>
-            </Card.Content>
-          </Card>
-          
-          <Card style={styles.statCard} elevation={2}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>{hiringStats.completed_positions || 0}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </Card.Content>
-          </Card>
-          
-          <Card style={styles.statCard} elevation={2}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>{hiringStats.active_positions || 0}</Text>
-              <Text style={styles.statLabel}>Active</Text>
-            </Card.Content>
-          </Card>
-          
-          <Card style={styles.statCard} elevation={2}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>{hiringStats.pending_offers || 0}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </Card.Content>
-          </Card>
-        </View>
-      </View>
-    );
+  const openEmail = (email) => {
+    if (email) {
+      Linking.openURL(`mailto:${email}`);
+    }
   };
 
-  const renderHiringHistory = () => {
-    // Safety check: ensure hiringHistory is always an array
-    if (!Array.isArray(hiringHistory) || hiringHistory.length === 0) {
+  if (loading) {
       return (
-        <View style={styles.noHistory}>
-          <MaterialCommunityIcons name="briefcase-outline" size={48} color="#9CA3AF" />
-          <Text style={styles.noHistoryTitle}>No Hiring History Yet</Text>
-          <Text style={styles.noHistorySubtitle}>
-            When associates hire you, your positions will appear here
-          </Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text style={styles.loadingText}>Loading hiring history...</Text>
         </View>
       );
     }
 
+  if (error) {
     return (
-      <View style={styles.historyContainer}>
-        <Text style={styles.sectionTitle}>Hiring History</Text>
-        {hiringHistory.map((hiring, index) => (
-          <Card key={hiring.hiring_id} style={styles.historyCard} elevation={2}>
-            <Card.Content>
-              <View style={styles.historyHeader}>
-                <Text style={styles.historyPositionTitle}>{hiring.position_title}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(hiring.status) }]}>
-                  <Text style={styles.statusBadgeText}>
-                    {getStatusText(hiring.status)}
-                  </Text>
-                </View>
-              </View>
-              
-              <Text style={styles.historyAssociate}>
-                {hiring.associate_contact} • {hiring.associate_industry}
-              </Text>
-              
-              {hiring.project_description && (
-                <Text style={styles.historyDescription}>{hiring.project_description}</Text>
-              )}
-              
-              <View style={styles.historyDetails}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Hired:</Text>
-                  <Text style={styles.detailValue}>{formatDate(hiring.hiring_date)}</Text>
-                </View>
-                
-                {hiring.start_date && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Started:</Text>
-                    <Text style={styles.detailValue}>{formatDate(hiring.start_date)}</Text>
-                  </View>
-                )}
-                
-                {hiring.end_date && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Ended:</Text>
-                    <Text style={styles.detailValue}>{formatDate(hiring.end_date)}</Text>
-                  </View>
-                )}
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Salary:</Text>
-                  <Text style={styles.detailValue}>
-                    {formatCurrency(hiring.salary_amount, hiring.salary_currency)}
-                  </Text>
-                </View>
-              </View>
-            </Card.Content>
-          </Card>
-        ))}
+      <View style={styles.errorContainer}>
+        <MaterialCommunityIcons name="alert-circle" size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchHiringHistory}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
-  };
+  }
 
-  if (isLoading) {
+  if (hiringHistory.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading hiring history...</Text>
+      <View style={styles.emptyContainer}>
+        <MaterialCommunityIcons name="briefcase-outline" size={64} color="#CCC" />
+        <Text style={styles.emptyTitle}>No Hiring History Yet</Text>
+        <Text style={styles.emptySubtitle}>
+          When associates hire you for projects, your hiring history will appear here
+        </Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchHiringHistory}>
+          <Text style={styles.refreshButtonText}>Refresh</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -294,22 +163,281 @@ const HiringHistoryScreen = ({ navigation }) => {
       {/* Header */}
       <Surface style={styles.header} elevation={4}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#FF6B35" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Hiring History</Text>
-          <View style={styles.placeholder} />
+          <View style={styles.headerRight} />
         </View>
+        <Text style={styles.headerSubtitle}>
+          Your project history and company relationships
+        </Text>
       </Surface>
 
-      {/* Current Hiring */}
-      {renderCurrentHiring()}
+      {/* Hiring History List */}
+      <View style={styles.hiringList}>
+        {hiringHistory.map((hire, index) => (
+          <Card key={index} style={styles.hiringCard} elevation={3}>
+            <Card.Content style={styles.hiringContent}>
+              {/* Project Header */}
+              <View style={styles.projectHeader}>
+                <View style={styles.projectInfo}>
+                  <MaterialCommunityIcons 
+                    name="briefcase" 
+                    size={20} 
+                    color="#FF6B35" 
+                  />
+                  <Text style={styles.projectTitle}>{hire.project_title}</Text>
+                </View>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(hire.status) }
+                ]}>
+                  <Text style={styles.statusText}>
+                    {getStatusText(hire.status)}
+                  </Text>
+                </View>
+              </View>
 
-      {/* Hiring Statistics */}
-      {renderHiringStats()}
+              {/* Company Information */}
+              <View style={styles.companySection}>
+                <Text style={styles.sectionTitle}>Company Contact Details</Text>
+                
+                <View style={styles.companyInfo}>
+                  <View style={styles.companyRow}>
+                    <MaterialCommunityIcons 
+                      name="office-building" 
+                      size={16} 
+                      color="#666" 
+                    />
+                    <Text style={styles.companyName}>
+                      {hire.company_contact || 'Company Contact N/A'}
+                    </Text>
+                  </View>
 
-      {/* Hiring History */}
-      {renderHiringHistory()}
+                  {hire.company_contact && (
+                    <View style={styles.companyRow}>
+                      <MaterialCommunityIcons 
+                        name="account" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.companyDetail}>
+                        Contact: {hire.company_contact}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.industry && (
+                    <View style={styles.companyRow}>
+                      <MaterialCommunityIcons 
+                        name="domain" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.companyDetail}>
+                        {hire.industry}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.website && (
+                    <TouchableOpacity 
+                      style={styles.companyRow}
+                      onPress={() => openWebsite(hire.website)}
+                    >
+                      <MaterialCommunityIcons 
+                        name="web" 
+                        size={16} 
+                        color="#3B82F6" 
+                      />
+                      <Text style={[styles.companyDetail, styles.linkText]}>
+                        {hire.website}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {hire.phone && (
+                    <TouchableOpacity 
+                      style={styles.companyRow}
+                      onPress={() => openPhone(hire.phone)}
+                    >
+                      <MaterialCommunityIcons 
+                        name="phone" 
+                        size={16} 
+                        color="#10B981" 
+                      />
+                      <Text style={[styles.companyDetail, styles.linkText]}>
+                        {hire.phone}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {hire.company_email && (
+                    <TouchableOpacity 
+                      style={styles.companyRow}
+                      onPress={() => openEmail(hire.company_email)}
+                    >
+                      <MaterialCommunityIcons 
+                        name="email" 
+                        size={16} 
+                        color="#8B5CF6" 
+                      />
+                      <Text style={[styles.companyDetail, styles.linkText]}>
+                        {hire.company_email}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {hire.address && (
+                    <View style={styles.companyRow}>
+                      <MaterialCommunityIcons 
+                        name="map-marker" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.companyDetail}>
+                        {hire.address}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Project Details */}
+              <View style={styles.projectSection}>
+                <Text style={styles.sectionTitle}>Project Details</Text>
+                
+                <View style={styles.projectDetails}>
+                  {hire.project_description && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="text" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        {hire.project_description}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.agreed_terms && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="file-document" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        {hire.agreed_terms}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <MaterialCommunityIcons 
+                      name="calendar" 
+                      size={16} 
+                      color="#666" 
+                    />
+                    <Text style={styles.detailText}>
+                      Hired: {formatDate(hire.hire_date)}
+                    </Text>
+                  </View>
+
+                  {hire.start_date && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="play-circle" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        Start: {formatDate(hire.start_date)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.expected_end_date && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="stop-circle" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        Expected End: {formatDate(hire.expected_end_date)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.actual_end_date && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="check-circle" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        Completed: {formatDate(hire.actual_end_date)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {hire.agreed_rate && (
+                    <View style={styles.detailRow}>
+                      <MaterialCommunityIcons 
+                        name="currency-usd" 
+                        size={16} 
+                        color="#666" 
+                      />
+                      <Text style={styles.detailText}>
+                        Rate: {formatCurrency(hire.agreed_rate, hire.rate_type)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Notes Section */}
+              {(hire.associate_notes || hire.freelancer_notes) && (
+                <View style={styles.notesSection}>
+                  <Text style={styles.sectionTitle}>Notes</Text>
+                  
+                                                {hire.associate_notes && (
+                                <View style={styles.noteItem}>
+                                  <Text style={styles.noteLabel}>Client Notes:</Text>
+                                  <Text style={styles.noteText}>{hire.associate_notes}</Text>
+                                </View>
+                              )}
+
+                  {hire.freelancer_notes && (
+                    <View style={styles.noteItem}>
+                      <Text style={styles.noteLabel}>Your Notes:</Text>
+                      <Text style={styles.noteText}>{hire.freelancer_notes}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+        ))}
+      </View>
+
+      {/* Summary */}
+      <View style={styles.summaryContainer}>
+        <Text style={styles.summaryTitle}>Summary</Text>
+        <Text style={styles.summaryText}>
+          You have been hired for {hiringHistory.length} project{hiringHistory.length !== 1 ? 's' : ''}
+        </Text>
+        <Text style={styles.summarySubtext}>
+          Keep building your professional relationships!
+        </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -323,201 +451,224 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    padding: responsive.ifTablet(spacing.xl, spacing.lg),
   },
   loadingText: {
-    fontSize: 16,
+    marginTop: responsive.ifTablet(spacing.md, spacing.sm),
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#666',
   },
-  header: {
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: responsive.ifTablet(spacing.xl, spacing.lg),
+  },
+  errorText: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: responsive.ifTablet(spacing.md, spacing.sm),
+    marginBottom: responsive.ifTablet(spacing.lg, spacing.md),
+  },
+  retryButton: {
     backgroundColor: '#FF6B35',
-    marginBottom: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.sm),
+    borderRadius: responsive.ifTablet(borderRadius.md, borderRadius.sm),
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: responsive.ifTablet(spacing.xl, spacing.lg),
+  },
+  emptyTitle: {
+    fontSize: responsive.ifTablet(fontSize.xl, fontSize.lg),
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: responsive.ifTablet(spacing.lg, spacing.md),
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.xs),
+  },
+  emptySubtitle: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: responsive.ifTablet(24, 20),
+    marginBottom: responsive.ifTablet(spacing.lg, spacing.md),
+  },
+  refreshButton: {
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.sm),
+    borderRadius: responsive.ifTablet(borderRadius.md, borderRadius.sm),
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    fontWeight: '600',
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingTop: responsive.ifTablet(spacing.xl, spacing.lg),
+    paddingBottom: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.xs),
   },
   backButton: {
-    padding: 8,
+    padding: responsive.ifTablet(spacing.xs, spacing.xxs),
+    marginRight: responsive.ifTablet(spacing.sm, spacing.xs),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: responsive.ifTablet(fontSize.xxl, fontSize.xl),
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333',
+    flex: 1,
   },
-  placeholder: {
-    width: 40,
+  headerRight: {
+    width: responsive.ifTablet(40, 32),
   },
-  currentHiringCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+  headerSubtitle: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    color: '#666',
   },
-  currentHiringHeader: {
+  hiringList: {
+    padding: responsive.ifTablet(spacing.lg, spacing.md),
+    gap: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  hiringCard: {
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#fff',
+    marginBottom: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  hiringContent: {
+    padding: responsive.ifTablet(spacing.lg, spacing.md),
+  },
+  projectHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: responsive.ifTablet(spacing.md, spacing.sm),
   },
-  currentHiringTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginLeft: 8,
+  projectInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: responsive.ifTablet(spacing.sm, spacing.xs),
   },
-  positionTitle: {
-    fontSize: 16,
+  projectTitle: {
+    fontSize: responsive.ifTablet(fontSize.lg, fontSize.md),
     fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 4,
+    color: '#333',
+    flex: 1,
   },
-  associateInfo: {
-    fontSize: 14,
+  statusBadge: {
+    paddingHorizontal: responsive.ifTablet(spacing.sm, spacing.xs),
+    paddingVertical: responsive.ifTablet(spacing.xs, 2),
+    borderRadius: responsive.ifTablet(12, 8),
+  },
+  statusText: {
+    fontSize: responsive.ifTablet(fontSize.xs, fontSize.xxs),
+    fontWeight: '600',
+    color: '#fff',
+  },
+  sectionTitle: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.xs),
+    marginTop: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  companySection: {
+    marginBottom: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  companyInfo: {
+    gap: responsive.ifTablet(spacing.sm, spacing.xs),
+  },
+  companyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsive.ifTablet(spacing.sm, spacing.xs),
+  },
+  companyName: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    fontWeight: '600',
+    color: '#333',
+  },
+  companyDetail: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
-    marginBottom: 12,
+    flex: 1,
   },
-  currentHiringDetails: {
-    marginBottom: 16,
+  linkText: {
+    color: '#3B82F6',
+    textDecorationLine: 'underline',
+  },
+  projectSection: {
+    marginBottom: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  projectDetails: {
+    gap: responsive.ifTablet(spacing.sm, spacing.xs),
   },
   detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    gap: responsive.ifTablet(spacing.sm, spacing.xs),
   },
-  detailLabel: {
-    fontSize: 14,
+  detailText: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  offerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  offerButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    lineHeight: responsive.ifTablet(20, 18),
   },
-  acceptButton: {
-    backgroundColor: '#10B981',
+  notesSection: {
+    marginBottom: responsive.ifTablet(spacing.md, spacing.sm),
   },
-  rejectButton: {
-    backgroundColor: '#EF4444',
+  noteItem: {
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.xs),
   },
-  offerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  noteLabel: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     fontWeight: '600',
+    color: '#333',
+    marginBottom: responsive.ifTablet(spacing.xs, 2),
   },
-  statsContainer: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  statContent: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
+  noteText: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
-    textAlign: 'center',
+    lineHeight: responsive.ifTablet(20, 18),
   },
-  historyContainer: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  historyCard: {
-    marginBottom: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  summaryContainer: {
+    backgroundColor: '#fff',
+    margin: responsive.ifTablet(spacing.lg, spacing.md),
+    padding: responsive.ifTablet(spacing.lg, spacing.md),
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    marginBottom: 8,
   },
-  historyPositionTitle: {
-    fontSize: 16,
+  summaryTitle: {
+    fontSize: responsive.ifTablet(fontSize.lg, fontSize.md),
     fontWeight: '600',
-    color: '#1A1A1A',
-    flex: 1,
-    marginRight: 12,
+    color: '#333',
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.xs),
   },
-  historyAssociate: {
-    fontSize: 14,
+  summaryText: {
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#666',
-    marginBottom: 8,
+    marginBottom: responsive.ifTablet(spacing.xs, 2),
   },
-  historyDescription: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  historyDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 12,
-  },
-  noHistory: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    marginHorizontal: 16,
-  },
-  noHistoryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  noHistorySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
+  summarySubtext: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
 

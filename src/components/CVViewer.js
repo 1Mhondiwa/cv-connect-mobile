@@ -74,15 +74,13 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
         setValidUrl(cvUrl);
         setUrlStatus('valid');
       } else {
-        console.error('URL returned error status:', response.status);
-        setUrlStatus('invalid');
+        console.log('Initial URL returned status:', response.status, 'trying alternatives...');
         
         // Try to construct alternative URLs
         await tryAlternativeUrls();
       }
     } catch (error) {
-      console.error('Error checking URL:', error);
-      setUrlStatus('invalid');
+      console.log('Error checking initial URL, trying alternatives...');
       
       // Try to construct alternative URLs
       await tryAlternativeUrls();
@@ -98,14 +96,10 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
     
     // Try different URL patterns
     const alternativeUrls = [
-              `http://192.168.101.104:5000/uploads/cvs/${storedFilename}`,
-        `http://192.168.101.104:5000/cv/${storedFilename}`,
-        `http://192.168.101.104:8081/uploads/cvs/${storedFilename}`,
-        `http://192.168.101.104:8081/cv/${storedFilename}`,
-      `http://10.254.29.174:5000/uploads/cvs/${storedFilename}`,
-      `http://10.254.29.174:5000/cv/${storedFilename}`,
-      `http://10.254.29.174:8081/uploads/cvs/${storedFilename}`,
-      `http://10.254.29.174:8081/cv/${storedFilename}`,
+      `http://10.254.121.136:5000/uploads/cvs/${storedFilename}`,
+      `http://10.254.121.136:5000/cv/${storedFilename}`,
+      `http://10.254.121.136:8081/uploads/cvs/${storedFilename}`,
+      `http://10.254.121.136:8081/cv/${storedFilename}`,
     ];
     
     for (const altUrl of alternativeUrls) {
@@ -193,15 +187,9 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
           <Text style={styles.statusText}>CV is accessible</Text>
         </View>
       );
-    } else {
-      return (
-        <View style={styles.statusContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={20} color="#F44336" />
-          <Text style={styles.statusText}>CV file not accessible</Text>
-          <Text style={styles.statusSubtext}>The file may be missing from the server</Text>
-        </View>
-      );
     }
+    // Don't show any status if URL is not valid yet
+    return null;
   };
 
   const renderCVInfo = () => {
@@ -314,8 +302,8 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
           <View style={styles.headerButtons}>
             <TouchableOpacity 
               onPress={handleViewCV} 
-              style={[styles.headerButton, !validUrl && styles.headerButtonDisabled]}
-              disabled={!validUrl}
+              style={[styles.headerButton, urlStatus === 'checking' && styles.headerButtonDisabled]}
+              disabled={urlStatus === 'checking'}
             >
               <MaterialCommunityIcons name="eye" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -337,30 +325,18 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
               File Type: {cleanCvFilename?.split('.').pop()?.toUpperCase() || 'Unknown'}
             </Text>
             
-            {/* Show error message if file is not accessible */}
-            {urlStatus === 'invalid' && (
-              <View style={styles.errorMessageContainer}>
-                <MaterialCommunityIcons name="file-alert" size={48} color="#F44336" />
-                <Text style={styles.errorMessageTitle}>CV File Not Found</Text>
-                <Text style={styles.errorMessageText}>
-                  The CV file exists in your profile but the actual file is missing from the server.
-                </Text>
-                <Text style={styles.errorMessageSubtext}>
-                  This usually happens when files are deleted or the upload was interrupted.
-                </Text>
-              </View>
-            )}
+
           </View>
           
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={[styles.actionButton, !validUrl && styles.actionButtonDisabled]} 
+              style={[styles.actionButton, urlStatus === 'checking' && styles.actionButtonDisabled]} 
               onPress={handleViewCV}
-              disabled={!validUrl}
+              disabled={urlStatus === 'checking'}
             >
               <MaterialCommunityIcons name="eye" size={32} color="#FFFFFF" />
               <Text style={styles.actionButtonText}>
-                {urlStatus === 'invalid' ? 'File Not Accessible' : 'View CV'}
+                View CV
               </Text>
             </TouchableOpacity>
           </View>

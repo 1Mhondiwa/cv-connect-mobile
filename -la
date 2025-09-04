@@ -1,0 +1,20 @@
+[33mcommit 94dde61f22246b62f1637cdb4d032a890f9f11c9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelopment[m[33m, [m[1;31morigin/development[m[33m)[m
+Author: Eve-C <evelynchengeta@gmail.com>
+Date:   Thu Aug 14 22:18:57 2025 +0200
+
+    Mobile application frontend code - Implemented hiring history feature for freelancers with complete navigation and UI components
+
+src/components/CVViewer.js
+src/components/CountryCodePicker.js
+src/navigation/AppNavigator.js
+src/navigation/FreelancerTabNavigator.js
+src/screens/auth/ForgotPasswordScreen.js
+src/screens/auth/LoginScreen.js
+src/screens/auth/RegisterScreen.js
+src/screens/auth/ResetPasswordScreen.js
+src/screens/freelancer/DashboardScreen.js
+src/screens/freelancer/HiringHistoryScreen.js
+src/screens/freelancer/ProfileScreen.js
+src/services/api.js
+src/services/socketService.js
+src/store/slices/authSlice.js

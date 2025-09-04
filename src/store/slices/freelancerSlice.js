@@ -153,6 +153,11 @@ const freelancerSlice = createSlice({
     setHasCV: (state, action) => {
       state.hasCV = action.payload;
     },
+    updateDashboardActivities: (state, action) => {
+      if (state.dashboardData) {
+        state.dashboardData.recent_activity = action.payload;
+      }
+    },
     resetFreelancerState: (state) => {
       state.profile = null;
       state.dashboardData = null;
@@ -318,5 +323,5 @@ const freelancerSlice = createSlice({
   },
 });
 
-export const { clearError, setHasCV, resetFreelancerState } = freelancerSlice.actions;
+export const { clearError, setHasCV, updateDashboardActivities, resetFreelancerState } = freelancerSlice.actions;
 export default freelancerSlice.reducer; 

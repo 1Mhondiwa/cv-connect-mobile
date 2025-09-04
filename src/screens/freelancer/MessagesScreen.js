@@ -99,20 +99,20 @@ const MessagesScreen = ({ navigation }) => {
                 {lastMessageTime}
               </Text>
             </View>
-            <View style={styles.messagePreview}>
-              <Text 
-                variant="bodyMedium" 
-                style={[styles.lastMessage, isUnread && styles.unreadMessage]}
-                numberOfLines={1}
-              >
-                {truncatedMessage || 'No messages yet'}
-              </Text>
-              {isUnread && (
-                <Badge style={styles.badge} size={20}>
-                  {item.unread_count}
-                </Badge>
-              )}
-            </View>
+                         <View style={styles.messagePreview}>
+               <Text 
+                 variant="bodyMedium" 
+                 style={[styles.lastMessage, isUnread && styles.unreadMessage]}
+                 numberOfLines={1}
+               >
+                 {truncatedMessage || 'Tap to respond to message'}
+               </Text>
+               {isUnread && (
+                 <Badge style={styles.badge} size={20}>
+                   {item.unread_count}
+                 </Badge>
+               )}
+             </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -129,20 +129,11 @@ const MessagesScreen = ({ navigation }) => {
           style={styles.emptyIcon}
         />
         <Text variant="headlineSmall" style={styles.emptyTitle}>
-          No Conversations Yet
+          No Messages Yet
         </Text>
         <Text variant="bodyMedium" style={styles.emptyDescription}>
-          Start connecting with employers and clients to begin messaging.
+          You can only respond to conversations that employers and clients start with you. Check back later for new messages.
         </Text>
-        <Button
-          mode="contained"
-          onPress={() => navigation.navigate('Search')}
-          style={styles.searchButton}
-          contentStyle={styles.searchButtonContent}
-          icon="account-search"
-        >
-          Find People to Message
-        </Button>
       </Card.Content>
     </Card>
   );
@@ -161,12 +152,12 @@ const MessagesScreen = ({ navigation }) => {
             <Text variant="headlineSmall" style={styles.welcomeText}>
               Messages
             </Text>
-            <Text variant="bodyMedium" style={styles.subtitleText}>
-              {conversations.length > 0 
-                ? `${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}`
-                : 'Connect with employers and clients'
-              }
-            </Text>
+                         <Text variant="bodyMedium" style={styles.subtitleText}>
+               {conversations.length > 0 
+                 ? `${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}`
+                 : 'You can only respond to messages from employers and clients'
+               }
+             </Text>
             {unreadCount > 0 && (
               <View style={styles.unreadIndicator}>
                 <Badge style={styles.headerBadge} size={16}>
@@ -349,13 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 20,
   },
-  searchButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-  },
-  searchButtonContent: {
-    height: 48,
-  },
+
 });
 
 export default MessagesScreen; 

@@ -3,6 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from 'react-native-paper';
 import { Platform } from 'react-native';
+import { 
+  getResponsiveTabBarStyle, 
+  getResponsiveTabBarLabelStyle,
+  getResponsiveTabBarIconStyle,
+  getResponsiveTabBarConfig
+} from '../components/ResponsiveBottomTabBar';
 
 // Admin Screens
 import AdminDashboardScreen from '../screens/admin/DashboardScreen';
@@ -28,28 +34,16 @@ const AdminTabNavigator = () => {
             iconName = focused ? 'account' : 'account-outline';
           }
 
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+          // Use responsive icon size
+          const config = getResponsiveTabBarConfig();
+          const iconSize = config.iconSize;
+
+          return <MaterialCommunityIcons name={iconName} size={iconSize} color={color} />;
         },
         tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#8B4513',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-          paddingBottom: Platform.OS === 'ios' ? 20 : 12,
-          paddingTop: 8,
-          height: Platform.OS === 'ios' ? 90 : 80,
-          paddingHorizontal: 10,
-          // Add safe area padding for Android
-          ...(Platform.OS === 'android' && {
-            paddingBottom: 20,
-          }),
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: 4,
-        },
+        tabBarStyle: getResponsiveTabBarStyle(),
+        tabBarLabelStyle: getResponsiveTabBarLabelStyle(),
         headerShown: false,
       })}
     >

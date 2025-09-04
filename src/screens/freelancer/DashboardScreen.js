@@ -5,15 +5,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Linking,
+  Dimensions,
+  Alert,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../store/slices/authSlice';
-import { getDashboardData, getProfile, updateAvailability } from '../../store/slices/freelancerSlice';
+import { useSelector, useDispatch } from 'react-redux';
+
+
 import socketService from '../../services/socketService';
 
 import { profileAPI } from '../../services/api';
+import { updateAvailability, getProfile } from '../../store/slices/freelancerSlice';
+import { logout } from '../../store/slices/authSlice';
 
 import {
   Card,
@@ -23,37 +26,70 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+// Import responsive utilities
+import { 
+  scale, 
+  verticalScale, 
+  fontSize, 
+  spacing, 
+  borderRadius, 
+  responsive,
+  isTablet,
+  isSmallDevice,
+  isLargeDevice
+} from '../../utils/responsive';
 
-  const DashboardScreen = ({ navigation }) => {
+// Helper function to get activity color based on status
+const getActivityColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'completed':
+      return '#059652'; // Success green
+    case 'pending':
+      return '#ffc107'; // Warning yellow
+    case 'failed':
+      return '#df1529'; // Error red
+    default:
+      return '#FF6B35'; // Default orange
+  }
+};
+
+const DashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const { user } = useSelector((state) => state.auth);
+    const { user, token } = useSelector((state) => state.auth);
     const { dashboardData, profile, skills, isLoading } = useSelector((state) => state.freelancer);
+    // Debug logging for component state
+    console.log('🚀 DashboardScreen rendered');
+    console.log('🚀 user:', user);
+    console.log('🚀 dashboardData:', dashboardData);
+    console.log('🚀 profile:', profile);
     
-    // Local state for real-time message count
-    const [realTimeMessageCount, setRealTimeMessageCount] = useState(0);
-    const [messageHandlerId, setMessageHandlerId] = useState(null);
-    const [isUpdatingMessages, setIsUpdatingMessages] = useState(false);
+      // Local state for activities
+  const [activities, setActivities] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [isRefreshingActivities, setIsRefreshingActivities] = useState(false);
+  
+  // Local state for hiring data
+  const [hiringStats, setHiringStats] = useState(null);
+  const [hiringHistory, setHiringHistory] = useState([]);
+  const [hiringLoading, setHiringLoading] = useState(false);
+    
 
-  // Log when real-time message count changes
-  useEffect(() => {
-    console.log('Real-time message count updated:', realTimeMessageCount);
-  }, [realTimeMessageCount]);
+
+
 
   useEffect(() => {
     loadDashboardData();
+    // Delay fetchActivity to ensure dashboard data is loaded first
+    setTimeout(() => {
+      fetchActivity();
+    }, 1000);
+    // Fetch hiring data
+    fetchHiringData();
     setupRealTimeUpdates();
     
-    // Set up periodic refresh every 30 seconds
-    const intervalId = setInterval(() => {
-      updateMessageCount();
-    }, 30000); // 30 seconds
-    
     return () => {
-      // Cleanup message handler and interval when component unmounts
-      if (messageHandlerId) {
-        socketService.removeMessageHandler(messageHandlerId);
-      }
-      clearInterval(intervalId);
+      // Cleanup message handler when component unmounts
+      // Note: WebSocket cleanup is handled by socketService
     };
   }, []); // Run only once on mount
 
@@ -61,10 +97,34 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadDashboardData();
+      fetchActivity();
+      fetchHiringData();
     });
 
     return unsubscribe;
   }, [navigation]);
+
+  // Update activities when dashboard data changes (fallback)
+  useEffect(() => {
+    if (dashboardData?.recent_activity && activities.length === 0) {
+      console.log('🔄 Dashboard data updated, syncing activities...');
+      console.log('📊 Dashboard activities:', dashboardData.recent_activity);
+      setActivities(dashboardData.recent_activity);
+    }
+  }, [dashboardData?.recent_activity, activities.length]);
+  
+
+
+  // Debug: Log activities state changes
+  useEffect(() => {
+    console.log('📊 Activities state updated:', activities);
+  }, [activities]);
+
+
+
+
+
+
 
   const setupRealTimeUpdates = () => {
     // Connect to WebSocket if not already connected
@@ -74,72 +134,102 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
     // Register message handler for real-time updates
     const handlerId = socketService.onMessage((message) => {
-      console.log('Real-time message received:', message);
-      // Update message count in real-time
-      updateMessageCount();
+      console.log('📨 Real-time message received:', message);
+      
+      // Note: Message count updates are now handled by navigation badge
+      // The Redux store will automatically update the unread count
     });
-
-    setMessageHandlerId(handlerId);
   };
 
-  const updateMessageCount = async () => {
-    try {
-      setIsUpdatingMessages(true);
-      console.log('Updating message count...');
-      
-      // Use Redux action to get latest dashboard data
-      const result = await dispatch(getDashboardData()).unwrap();
-      console.log('Dashboard data updated:', result);
-      
-      // The backend returns { success: true, dashboard: { unread_messages: 2 } }
-      if (result?.dashboard?.unread_messages !== undefined) {
-        setRealTimeMessageCount(result.dashboard.unread_messages);
-        console.log('Message count updated to:', result.dashboard.unread_messages);
-      } else {
-        console.log('No unread_messages in response:', result);
-      }
-    } catch (error) {
-      console.error('Error updating message count:', error);
-      Alert.alert('Error', 'Failed to refresh message count. Please try again.');
-    } finally {
-      setIsUpdatingMessages(false);
-    }
-  };
+  
 
   const loadDashboardData = async () => {
     try {
-      // Load dashboard data and profile data
-      const [dashboardResult, profileResult] = await Promise.all([
-        dispatch(getDashboardData()).unwrap(),
-        dispatch(getProfile()).unwrap()
-      ]);
-      
-      // Set initial message count using correct nested structure
-      if (dashboardResult?.dashboard?.unread_messages !== undefined) {
-        setRealTimeMessageCount(dashboardResult.dashboard.unread_messages);
-        console.log('Initial message count set to:', dashboardResult.dashboard.unread_messages);
-      }
+      // Dashboard data is loaded via Redux store
+      // The component will automatically re-render when the store updates
+      console.log('✅ Dashboard data loading handled by Redux store');
     } catch (error) {
       // Error loading dashboard data
       console.error('Error loading dashboard data:', error);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', onPress: async () => {
-          try {
-            await dispatch(logout()).unwrap();
-          } catch (error) {
-            // Logout error
+
+
+  const fetchActivity = async () => {
+    try {
+      console.log('🔍 Fetching activities...');
+      
+      // First try to get activities from the dedicated endpoint
+      if (profileAPI && typeof profileAPI.getActivity === 'function') {
+        try {
+          const response = await profileAPI.getActivity();
+          console.log('📡 API Response from /freelancer/activity:', response);
+          
+          if (response.data.success) {
+            console.log('✅ Activities fetched successfully from API');
+            setActivities(response.data.activities || []);
+            setActivityLoading(false);
+            return;
           }
-        }}
-      ]
-    );
+        } catch (apiError) {
+          console.log('⚠️ API call failed, using dashboard data fallback');
+        }
+      }
+      
+      // Fallback: use activities from dashboard data
+      if (dashboardData?.recent_activity) {
+        console.log('🔄 Using activities from dashboard data');
+        setActivities(dashboardData.recent_activity);
+      } else {
+        console.log('📭 No activities available');
+        setActivities([]);
+      }
+    } catch (error) {
+      console.error('❌ Error in fetchActivity:', error);
+      setActivities([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const refreshActivities = async () => {
+    try {
+      setIsRefreshingActivities(true);
+      console.log('🔄 Refreshing activities...');
+      await fetchActivity();
+      console.log('✅ Activities refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing activities:', error);
+      // Don't show alert, just log the error
+    } finally {
+      setIsRefreshingActivities(false);
+    }
+  };
+
+  const fetchHiringData = async () => {
+    try {
+      setHiringLoading(true);
+      console.log('🔄 Fetching hiring data...');
+      
+      // Fetch hiring statistics
+      const statsResponse = await profileAPI.getHiringStats();
+      if (statsResponse.data.success) {
+        setHiringStats(statsResponse.data.stats);
+        console.log('✅ Hiring stats fetched:', statsResponse.data.stats);
+      }
+      
+      // Fetch hiring history
+      const historyResponse = await profileAPI.getHiringHistory();
+      if (historyResponse.data.success) {
+        setHiringHistory(historyResponse.data.hiring_history);
+        console.log('✅ Hiring history fetched:', historyResponse.data.hiring_history);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching hiring data:', error);
+    } finally {
+      setHiringLoading(false);
+    }
   };
 
   const handleAvailabilityToggle = async () => {
@@ -163,6 +253,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: () => dispatch(logout()) }
+      ]
+    );
+  };
 
 
 
@@ -170,20 +270,22 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 
 
+
+  // Debug logging for stats
+  console.log('📊 Building stats array...');
+  console.log('📊 profile?.skills?.length:', profile?.skills?.length);
+  console.log('📊 profile?.cv_skills?.length:', profile?.cv_skills?.length);
+  
   const stats = [
-    { 
-      title: 'Messages', 
-      value: realTimeMessageCount.toString(), 
-      color: '#8B4513',
-      icon: 'message'
-    },
     { 
       title: 'Skills', 
       value: ((profile?.skills?.length || 0) + (profile?.cv_skills?.length || 0)).toString(), 
       color: '#FF6B35',
       icon: 'star'
-    },
+    }
   ];
+  
+  console.log('📊 Final stats array:', stats);
 
   const quickActions = [];
 
@@ -216,10 +318,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.logoutButton}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
@@ -311,27 +410,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
                   iconColor={stat.color}
                   style={styles.statIcon}
                 />
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statTitle}>{stat.title}</Text>
-                
-                {/* Add refresh button for messages */}
-                {stat.title === 'Messages' && (
-                  <TouchableOpacity
-                    style={styles.refreshButton}
-                    onPress={() => {
-                      console.log('Refresh button clicked for messages');
-                      updateMessageCount();
-                    }}
-                    activeOpacity={0.7}
-                    disabled={isUpdatingMessages}
-                  >
-                    {isUpdatingMessages ? (
-                      <ActivityIndicator size="small" color="#8B4513" />
-                    ) : (
-                      <MaterialCommunityIcons name="refresh" size={16} color="#8B4513" />
-                    )}
-                  </TouchableOpacity>
-                )}
+                                <View style={styles.statValueRow}>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                </View>
+                <View style={styles.statTitleRow}>
+                  <Text style={styles.statTitle}>{stat.title}</Text>
+                </View>
               </Card.Content>
             </Card>
           ))}
@@ -340,25 +424,52 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 
 
-
-
-
-
       {/* Recent Activity */}
       <View style={styles.activityContainer}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={refreshActivities}
+            activeOpacity={0.7}
+            disabled={isRefreshingActivities}
+          >
+            {isRefreshingActivities ? (
+              <ActivityIndicator size="small" color="#8B4513" />
+            ) : (
+              <MaterialCommunityIcons name="refresh" size={16} color="#8B4513" />
+            )}
+          </TouchableOpacity>
+        </View>
         <Card style={styles.activityCard} elevation={2}>
           <Card.Content>
-            {dashboardData?.recent_activity?.length > 0 ? (
-              dashboardData.recent_activity.map((activity, index) => (
-                <View key={index} style={styles.activityItem}>
-                  <View style={[styles.activityDot, { backgroundColor: '#FF6B35' }]} />
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>{activity.description}</Text>
-                    <Text style={styles.activityTime}>{activity.time}</Text>
+            {activityLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#FF6B35" />
+                <Text style={styles.loadingText}>Loading activities...</Text>
+              </View>
+            ) : activities.length > 0 ? (
+              (() => {
+                console.log('📊 Rendering activities:', activities);
+                return activities.map((activity, index) => (
+                  <View key={index} style={styles.activityItem}>
+                    <View style={[styles.activityDot, { backgroundColor: getActivityColor(activity.status) }]} />
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityText}>{activity.activity_type}</Text>
+                      <Text style={styles.activityTime}>
+                        {new Date(activity.activity_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </Text>
+                      <Text style={[styles.activityStatus, { color: getActivityColor(activity.status) }]}>
+                        {activity.status}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))
+                ));
+              })()
             ) : (
               <View style={styles.noActivity}>
                 <Text style={styles.noActivityText}>No recent activity</Text>
@@ -383,30 +494,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
+
   header: {
     backgroundColor: '#FF6B35',
-    marginBottom: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    marginBottom: spacing.md,
+    borderBottomLeftRadius: responsive.ifTablet(24, 20),
+    borderBottomRightRadius: responsive.ifTablet(24, 20),
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.lg),
+    paddingTop: responsive.ifTablet(70, 60),
+    paddingBottom: responsive.ifTablet(spacing.lg, spacing.lg),
   },
   headerText: {
     flex: 1,
@@ -414,30 +515,30 @@ const styles = StyleSheet.create({
   headerAvailability: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   headerStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
+    marginRight: scale(6),
   },
   headerStatusText: {
-    fontSize: 12,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#fff',
     opacity: 0.9,
     fontWeight: '500',
   },
   greeting: {
-    fontSize: 16,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.md),
     color: '#fff',
     opacity: 0.9,
   },
   name: {
-    fontSize: 24,
+    fontSize: responsive.ifTablet(fontSize.xxxl, fontSize.xxl),
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   logoutButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -446,97 +547,112 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   logoutText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
   },
+
   statsContainer: {
-    padding: 16,
+    padding: responsive.ifTablet(spacing.lg, spacing.md),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: responsive.ifTablet(fontSize.xxl, fontSize.xl),
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    flexDirection: responsive.ifTablet('row', 'column'),
+    flexWrap: responsive.ifTablet('wrap', 'nowrap'),
+    gap: responsive.ifTablet(spacing.md, spacing.sm),
   },
   statCard: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 12,
-    borderLeftWidth: 4,
+    flex: responsive.ifTablet(1, undefined),
+    minWidth: responsive.ifTablet('45%', '100%'),
+    borderRadius: borderRadius.lg,
+    borderLeftWidth: responsive.ifTablet(4, 4),
   },
   statContent: {
     alignItems: 'center',
-    padding: 16,
+    padding: responsive.ifTablet(spacing.md, spacing.md),
   },
   statIcon: {
-    marginBottom: 8,
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   statValue: {
-    fontSize: 24,
+    fontSize: responsive.ifTablet(fontSize.xxxl, fontSize.xxl),
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
+
   statTitle: {
-    fontSize: 12,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
     textAlign: 'center',
   },
+  statTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+
   actionsContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingBottom: responsive.ifTablet(spacing.lg, spacing.md),
   },
   actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    flexDirection: responsive.ifTablet('row', 'column'),
+    flexWrap: responsive.ifTablet('wrap', 'nowrap'),
+    gap: responsive.ifTablet(spacing.md, spacing.sm),
   },
   actionCard: {
-    flex: 1,
-    minWidth: '45%',
-    borderRadius: 12,
+    flex: responsive.ifTablet(1, undefined),
+    minWidth: responsive.ifTablet('45%', '100%'),
+    borderRadius: borderRadius.lg,
   },
   actionTouchable: {
     flex: 1,
   },
   cvContainer: {
-    padding: 16,
+    padding: responsive.ifTablet(spacing.lg, spacing.md),
   },
   cvCard: {
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     backgroundColor: '#fff',
   },
   cvInfo: {
     alignItems: 'center',
   },
   cvFileName: {
-    fontSize: 18,
+    fontSize: responsive.ifTablet(fontSize.lg, fontSize.md),
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   cvFileSize: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#666',
-    marginBottom: 16,
+    marginBottom: responsive.ifTablet(spacing.md, spacing.md),
   },
   cvButtonsContainer: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: responsive.ifTablet('row', 'column'),
+    gap: responsive.ifTablet(spacing.md, spacing.sm),
   },
   cvButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 120,
+    paddingHorizontal: responsive.ifTablet(spacing.md, spacing.md),
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.md),
+    borderRadius: responsive.ifTablet(spacing.sm, spacing.sm),
+    minWidth: responsive.ifTablet(140, 120),
     justifyContent: 'center',
   },
   viewCVButton: {
@@ -554,115 +670,128 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
   },
   cvButtonText: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     fontWeight: '600',
     marginLeft: 8,
   },
   cvUploadContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: responsive.ifTablet(spacing.xl, spacing.lg),
   },
   cvUploadText: {
-    fontSize: 16,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.md),
     color: '#666',
-    marginTop: 12,
-    marginBottom: 16,
+    marginTop: responsive.ifTablet(spacing.md, spacing.sm),
+    marginBottom: responsive.ifTablet(spacing.md, spacing.md),
     textAlign: 'center',
   },
   actionContent: {
     alignItems: 'center',
-    padding: 20,
+    padding: responsive.ifTablet(spacing.xl, spacing.lg),
   },
   actionIcon: {
-    marginBottom: 12,
+    marginBottom: responsive.ifTablet(spacing.md, spacing.md),
   },
   actionTitle: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
   },
-  refreshButton: {
-    marginTop: 8,
-    padding: 4,
-  },
+
 
   activityContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingBottom: responsive.ifTablet(spacing.xxl, spacing.xxl),
   },
   activityCard: {
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.md),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
+    marginRight: responsive.ifTablet(spacing.md, spacing.md),
   },
   activityContent: {
     flex: 1,
   },
   activityText: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#333',
-    marginBottom: 2,
+    marginBottom: responsive.ifTablet(spacing.xs, spacing.xs),
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
+    marginBottom: responsive.ifTablet(spacing.xs, spacing.xs),
+  },
+  activityStatus: {
+    fontSize: responsive.ifTablet(fontSize.xs, fontSize.xs),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   noActivity: {
     alignItems: 'center',
-    padding: 24,
+    padding: responsive.ifTablet(spacing.xxl, spacing.xxl),
   },
   noActivityText: {
-    fontSize: 16,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.md),
     fontWeight: '600',
     color: '#666',
-    marginBottom: 8,
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   noActivitySubtext: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#999',
     textAlign: 'center',
   },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: responsive.ifTablet(spacing.xxl, spacing.xxl),
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: fontSize.md,
+    color: '#666',
+  },
   availabilityContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    paddingBottom: responsive.ifTablet(spacing.md, spacing.md),
   },
   availabilityCard: {
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     backgroundColor: '#f9f9f9',
-    borderLeftWidth: 4,
+    borderLeftWidth: responsive.ifTablet(4, 4),
     borderLeftColor: '#FF6B35',
   },
   availabilityContent: {
-    padding: 16,
+    padding: responsive.ifTablet(spacing.md, spacing.md),
   },
   availabilityHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: responsive.ifTablet(spacing.md, spacing.md),
   },
   availabilityTitle: {
-    fontSize: 18,
+    fontSize: responsive.ifTablet(fontSize.lg, fontSize.md),
     fontWeight: 'bold',
     color: '#333',
-    marginLeft: 8,
+    marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   availabilityStatus: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: responsive.ifTablet(spacing.md, spacing.md),
   },
   statusIndicator: {
     flexDirection: 'row',
@@ -670,38 +799,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
+    width: scale(12),
+    height: scale(12),
+    borderRadius: scale(6),
+    marginRight: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   statusText: {
-    fontSize: 16,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.md),
     fontWeight: '600',
     color: '#333',
   },
   availabilityToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.md),
+    paddingHorizontal: responsive.ifTablet(spacing.md, spacing.md),
+    borderRadius: responsive.ifTablet(24, 20),
     borderWidth: 1,
     borderColor: '#fff',
-    minWidth: 140,
+    minWidth: responsive.ifTablet(160, 140),
     justifyContent: 'center',
   },
   toggleButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: responsive.ifTablet(spacing.sm, scale(6)),
   },
   availabilityNote: {
-    fontSize: 12,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
     color: '#666',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: responsive.ifTablet(spacing.sm, spacing.sm),
     fontStyle: 'italic',
   },
   hiringHistoryButton: {
@@ -709,19 +838,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFF5F2',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 16,
+    paddingVertical: responsive.ifTablet(spacing.md, spacing.md),
+    paddingHorizontal: responsive.ifTablet(spacing.md, spacing.md),
+    borderRadius: responsive.ifTablet(spacing.sm, spacing.sm),
+    marginTop: responsive.ifTablet(spacing.md, spacing.md),
     borderWidth: 1,
     borderColor: '#FF6B35',
   },
   hiringHistoryButtonText: {
-    fontSize: 14,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     fontWeight: '600',
     color: '#FF6B35',
-    marginLeft: 8,
+    marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
   },
+
 });
 
 export default DashboardScreen; 
