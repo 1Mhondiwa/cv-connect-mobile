@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Create axios instance
-const API_BASE_URL = 'http://10.254.121.136:5000/api';
+const API_BASE_URL = 'http://10.0.0.10:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -249,28 +249,28 @@ export const interviewAPI = {
   scheduleInterview: (interviewData) => api.post('/interview/schedule', interviewData),
   
   // Get interviews for current user
-  getInterviews: (params) => api.get('/interview/my-interviews', { params }),
+  getInterviews: (params) => api.get('/interview/', { params }),
   
   // Respond to interview invitation
-  respondToInvitation: (invitationId, response) => api.put(`/interview/invitation/${invitationId}/respond`, { response }),
+  respondToInvitation: (invitationId, response) => api.post('/interview/respond', { invitation_id: invitationId, response }),
   
   // Update interview status
-  updateInterviewStatus: (interviewId, status) => api.put(`/interview/${interviewId}/status`, { status }),
+  updateInterviewStatus: (interviewId, status) => api.put('/interview/status', { interview_id: interviewId, status }),
   
   // Submit interview feedback (for associates)
-  submitFeedback: (interviewId, feedbackData) => api.post(`/interview/${interviewId}/feedback`, feedbackData),
+  submitFeedback: (interviewId, feedbackData) => api.post('/interview/feedback', { interview_id: interviewId, ...feedbackData }),
   
   // Get interview feedback (for freelancers)
   getMyFeedback: () => api.get('/interview/my-feedback'),
   
-  // Get interview details
-  getInterviewDetails: (interviewId) => api.get(`/interview/${interviewId}`),
+  // Get interview details (using the main endpoint with ID filter)
+  getInterviewDetails: (interviewId) => api.get('/interview/', { params: { interview_id: interviewId } }),
   
-  // Start video call
-  startVideoCall: (interviewId) => api.post(`/interview/${interviewId}/start-call`),
+  // Start video call (update interview status to in_progress)
+  startVideoCall: (interviewId) => api.put('/interview/status', { interview_id: interviewId, status: 'in_progress' }),
   
-  // End video call
-  endVideoCall: (interviewId) => api.post(`/interview/${interviewId}/end-call`),
+  // End video call (update interview status to completed)
+  endVideoCall: (interviewId) => api.put('/interview/status', { interview_id: interviewId, status: 'completed' }),
 };
 
 // Token management

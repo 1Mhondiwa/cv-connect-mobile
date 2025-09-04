@@ -47,7 +47,7 @@ import {
 
 const InterviewDashboardScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { userType } = useSelector((state) => state.auth);
+  const { userType, isAuthenticated, user } = useSelector((state) => state.auth);
   const { interviews, isLoading, error, success } = useSelector((state) => state.interview);
   
   const [refreshing, setRefreshing] = useState(false);
@@ -56,8 +56,17 @@ const InterviewDashboardScreen = ({ navigation }) => {
   // Load interviews on component mount and when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      dispatch(getInterviews());
-    }, [dispatch])
+      console.log('🔄 Loading interviews...');
+      console.log('👤 User authenticated:', isAuthenticated);
+      console.log('👤 User type:', userType);
+      console.log('👤 User data:', user);
+      
+      if (isAuthenticated && userType === 'freelancer') {
+        dispatch(getInterviews());
+      } else {
+        console.log('❌ User not authenticated or not a freelancer');
+      }
+    }, [dispatch, isAuthenticated, userType])
   );
 
   // Clear error and success messages

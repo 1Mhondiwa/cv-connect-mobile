@@ -6,9 +6,12 @@ export const getInterviews = createAsyncThunk(
   'interview/getInterviews',
   async (params = {}, { rejectWithValue }) => {
     try {
+      console.log('📡 API Call: Getting interviews with params:', params);
       const response = await interviewAPI.getInterviews(params);
+      console.log('✅ API Response:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ API Error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch interviews');
     }
   }
