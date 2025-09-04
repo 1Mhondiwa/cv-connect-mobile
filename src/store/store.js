@@ -6,6 +6,7 @@ import searchReducer from './slices/searchSlice';
 import freelancerReducer from './slices/freelancerSlice';
 import adminReducer from './slices/adminSlice';
 import associateReducer from './slices/associateSlice';
+import interviewReducer from './slices/interviewSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     freelancer: freelancerReducer,
     admin: adminReducer,
     associate: associateReducer,
+    interview: interviewReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

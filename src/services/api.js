@@ -243,6 +243,36 @@ export const hiringAPI = {
   updateHiringStatus: (hiringId, data) => api.put(`/hiring/${hiringId}/status`, data),
 };
 
+// Interview API
+export const interviewAPI = {
+  // Schedule interview (for associates)
+  scheduleInterview: (interviewData) => api.post('/interview/schedule', interviewData),
+  
+  // Get interviews for current user
+  getInterviews: (params) => api.get('/interview/my-interviews', { params }),
+  
+  // Respond to interview invitation
+  respondToInvitation: (invitationId, response) => api.put(`/interview/invitation/${invitationId}/respond`, { response }),
+  
+  // Update interview status
+  updateInterviewStatus: (interviewId, status) => api.put(`/interview/${interviewId}/status`, { status }),
+  
+  // Submit interview feedback (for associates)
+  submitFeedback: (interviewId, feedbackData) => api.post(`/interview/${interviewId}/feedback`, feedbackData),
+  
+  // Get interview feedback (for freelancers)
+  getMyFeedback: () => api.get('/interview/my-feedback'),
+  
+  // Get interview details
+  getInterviewDetails: (interviewId) => api.get(`/interview/${interviewId}`),
+  
+  // Start video call
+  startVideoCall: (interviewId) => api.post(`/interview/${interviewId}/start-call`),
+  
+  // End video call
+  endVideoCall: (interviewId) => api.post(`/interview/${interviewId}/end-call`),
+};
+
 // Token management
 export const tokenService = {
   saveToken: async (token) => {

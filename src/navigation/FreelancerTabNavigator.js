@@ -16,6 +16,8 @@ import {
 import DashboardScreen from '../screens/freelancer/DashboardScreen';
 import ProfileScreen from '../screens/freelancer/ProfileScreen';
 import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
+import InterviewDashboardScreen from '../screens/freelancer/InterviewDashboardScreen';
+import InterviewFeedbackScreen from '../screens/freelancer/InterviewFeedbackScreen';
 
 import MessagesScreen from '../screens/freelancer/MessagesScreen';
 import ChatScreen from '../screens/common/ChatScreen';
@@ -89,6 +91,13 @@ const ProfileStack = () => {
           title: 'Hiring History',
         }}
       />
+      <Stack.Screen 
+        name="InterviewFeedback" 
+        component={InterviewFeedbackScreen}
+        options={{
+          title: 'Interview Feedback',
+        }}
+      />
     </Stack.Navigator>
   );
 };
@@ -103,6 +112,8 @@ const FreelancerTabNavigator = () => {
 
     if (route.name === 'Dashboard') {
       iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
+    } else if (route.name === 'Interviews') {
+      iconName = focused ? 'video' : 'video-outline';
     } else if (route.name === 'Profile') {
       iconName = focused ? 'account' : 'account-outline';
     } else if (route.name === 'Messages') {
@@ -154,6 +165,14 @@ const FreelancerTabNavigator = () => {
         component={DashboardScreen}
         options={{
           title: 'Dashboard',
+        }}
+      />
+
+      <Tab.Screen 
+        name="Interviews" 
+        component={InterviewDashboardScreen}
+        options={{
+          title: 'Interviews',
         }}
       />
 
