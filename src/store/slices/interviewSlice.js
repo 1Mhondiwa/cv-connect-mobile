@@ -69,9 +69,12 @@ export const getMyFeedback = createAsyncThunk(
   'interview/getMyFeedback',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('📡 API Call: Getting my feedback...');
       const response = await interviewAPI.getMyFeedback();
+      console.log('✅ API Response for feedback:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ API Error for feedback:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch feedback');
     }
   }
@@ -248,7 +251,12 @@ const interviewSlice = createSlice({
       })
       .addCase(getMyFeedback.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.myFeedback = action.payload;
+        // Backend returns { success: true, data: { interviews, summary } }
+        const responseData = action.payload.data || action.payload;
+        state.myFeedback = {
+          feedback_list: responseData.interviews || [],
+          summary: responseData.summary || {}
+        };
       })
       .addCase(getMyFeedback.rejected, (state, action) => {
         state.isLoading = false;

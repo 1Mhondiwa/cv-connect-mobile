@@ -48,11 +48,13 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
 
   // Load feedback on component mount
   useEffect(() => {
+    console.log('🔄 InterviewFeedbackScreen: Loading feedback...');
     dispatch(getMyFeedback());
   }, [dispatch]);
 
   // Clear error and success messages
   useEffect(() => {
+    console.log('📊 InterviewFeedbackScreen state:', { myFeedback, isLoading, error, success });
     if (error) {
       Alert.alert('Error', error);
       dispatch(clearError());
@@ -61,7 +63,7 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
       Alert.alert('Success', success);
       dispatch(clearSuccess());
     }
-  }, [error, success, dispatch]);
+  }, [error, success, dispatch, myFeedback, isLoading]);
 
   // Handle refresh
   const onRefresh = React.useCallback(() => {
@@ -104,15 +106,15 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
 
   // Render feedback card
   const renderFeedbackCard = (feedback) => (
-    <Card key={feedback.feedback_id} style={styles.feedbackCard}>
+    <Card key={feedback.feedback_id || feedback.interview_id} style={styles.feedbackCard}>
       <Card.Content>
         <View style={styles.feedbackHeader}>
           <View style={styles.feedbackInfo}>
             <Title style={styles.feedbackTitle}>
-              Interview with {feedback.company_name || 'Company'}
+              Interview for {feedback.job_title || 'Position'}
             </Title>
             <Text style={styles.feedbackDate}>
-              {new Date(feedback.created_at).toLocaleDateString('en-US', {
+              {new Date(feedback.feedback_date || feedback.scheduled_date).toLocaleDateString('en-US', {
                 weekday: 'short',
                 year: 'numeric',
                 month: 'short',
@@ -125,7 +127,7 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
             style={styles.ratingChip}
             textStyle={styles.ratingChipText}
           >
-            {feedback.overall_rating}/5
+            {feedback.overall_rating || 0}/5
           </Chip>
         </View>
 
@@ -141,26 +143,26 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
         <View style={styles.recommendationSection}>
           <Text style={styles.sectionTitle}>Recommendation</Text>
           <Chip
-            icon={feedback.would_recommend ? 'thumb-up' : 'thumb-down'}
+            icon={feedback.recommendation === 'hire' ? 'thumb-up' : feedback.recommendation === 'maybe' ? 'help' : 'thumb-down'}
             style={[
               styles.recommendationChip,
               {
-                backgroundColor: feedback.would_recommend ? '#28a745' : '#dc3545',
+                backgroundColor: feedback.recommendation === 'hire' ? '#28a745' : feedback.recommendation === 'maybe' ? '#ffc107' : '#dc3545',
               },
             ]}
             textStyle={styles.recommendationChipText}
           >
-            {feedback.would_recommend ? 'Recommended' : 'Not Recommended'}
+            {feedback.recommendation === 'hire' ? 'Hire' : feedback.recommendation === 'maybe' ? 'Maybe' : 'No Hire'}
           </Chip>
         </View>
 
         {/* Skill Ratings */}
-        {feedback.skill_ratings && Object.keys(feedback.skill_ratings).length > 0 && (
+        {(feedback.technical_skills_rating || feedback.communication_rating || feedback.cultural_fit_rating) && (
           <View style={styles.skillsSection}>
             <Text style={styles.sectionTitle}>Skill Ratings</Text>
-            {Object.entries(feedback.skill_ratings).map(([skill, rating]) =>
-              renderSkillRating(skill, rating)
-            )}
+            {feedback.technical_skills_rating && renderSkillRating('Technical Skills', feedback.technical_skills_rating)}
+            {feedback.communication_rating && renderSkillRating('Communication', feedback.communication_rating)}
+            {feedback.cultural_fit_rating && renderSkillRating('Cultural Fit', feedback.cultural_fit_rating)}
           </View>
         )}
 
@@ -173,18 +175,18 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
         )}
 
         {/* Areas for Improvement */}
-        {feedback.improvement_areas && (
+        {feedback.areas_for_improvement && (
           <View style={styles.improvementSection}>
             <Text style={styles.sectionTitle}>Areas for Improvement</Text>
-            <Text style={styles.feedbackText}>{feedback.improvement_areas}</Text>
+            <Text style={styles.feedbackText}>{feedback.areas_for_improvement}</Text>
           </View>
         )}
 
         {/* Additional Comments */}
-        {feedback.additional_comments && (
+        {feedback.detailed_feedback && (
           <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>Additional Comments</Text>
-            <Text style={styles.feedbackText}>{feedback.additional_comments}</Text>
+            <Text style={styles.sectionTitle}>Detailed Feedback</Text>
+            <Text style={styles.feedbackText}>{feedback.detailed_feedback}</Text>
           </View>
         )}
       </Card.Content>
@@ -202,15 +204,17 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
         <Title style={styles.summaryTitle}>Your Interview Performance</Title>
         <View style={styles.summaryStats}>
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryNumber}>{summary.total_interviews}</Text>
+            <Text style={styles.summaryNumber}>{summary.totalInterviews || 0}</Text>
             <Text style={styles.summaryLabel}>Total Interviews</Text>
           </View>
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryNumber}>{summary.average_rating?.toFixed(1) || 'N/A'}</Text>
+            <Text style={styles.summaryNumber}>{summary.averageRating?.toFixed(1) || 'N/A'}</Text>
             <Text style={styles.summaryLabel}>Avg Rating</Text>
           </View>
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryNumber}>{summary.hire_rate?.toFixed(0) || 0}%</Text>
+            <Text style={styles.summaryNumber}>
+              {summary.totalInterviews > 0 ? Math.round((summary.hireRecommendations / summary.totalInterviews) * 100) : 0}%
+            </Text>
             <Text style={styles.summaryLabel}>Hire Rate</Text>
           </View>
         </View>
