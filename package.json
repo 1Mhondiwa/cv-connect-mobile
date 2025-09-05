@@ -26,6 +26,7 @@
     "react-native-vector-icons": "^10.0.3",
     "react-redux": "^9.2.0",
     "socket.io-client": "^4.8.1",
-    "@expo/config-plugins": "~10.1.1"
+    "@expo/config-plugins": "~10.1.1",
+    "expo-linear-gradient": "~14.1.5"
   }
 }

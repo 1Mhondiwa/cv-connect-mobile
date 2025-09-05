@@ -10,6 +10,10 @@ import { setSocketConnected } from '../store/slices/messageSlice';
 
 const Stack = createStackNavigator();
 
+// Landing and Splash Screens
+import SplashScreen from '../screens/SplashScreen';
+import LandingScreen from '../screens/LandingScreen';
+
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -39,6 +43,7 @@ const LoadingScreen = () => (
 // Auth Navigator
 const AuthNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Landing" component={LandingScreen} />
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
     <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
@@ -136,9 +141,9 @@ const AppNavigator = () => {
     };
   }, []); // Run only once on mount
 
-  // Show loading screen while initializing
+  // Show splash screen while initializing
   if (!isInitialized) {
-    return <LoadingScreen />;
+    return <SplashScreen />;
   }
 
   // Show loading screen while auth is loading
