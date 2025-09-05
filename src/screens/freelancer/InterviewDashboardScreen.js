@@ -280,8 +280,11 @@ const InterviewDashboardScreen = ({ navigation }) => {
             <Button
               mode="outlined"
               onPress={() => {
-                // Navigate to feedback screen
-                navigation.navigate('InterviewFeedback', { interviewId: interview.interview_id });
+                // Navigate to feedback screen through Profile stack
+                navigation.navigate('Profile', { 
+                  screen: 'InterviewFeedback', 
+                  params: { interviewId: interview.interview_id } 
+                });
               }}
               style={[styles.actionButton, styles.feedbackButton]}
               labelStyle={styles.buttonLabel}
