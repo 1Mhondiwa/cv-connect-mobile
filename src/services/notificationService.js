@@ -43,10 +43,19 @@ class NotificationService {
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+        name: 'CV Connect Notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF6B35',
+        description: 'General notifications for CV Connect',
+      });
+      
+      await Notifications.setNotificationChannelAsync('interview', {
+        name: 'Interview Notifications',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4A90E2',
+        description: 'Important interview-related notifications',
       });
     }
 
@@ -64,10 +73,20 @@ class NotificationService {
         return;
       }
       
-      token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log('📱 Expo push token:', token);
+      try {
+        // Try to get Expo push token with a projectId
+        token = (await Notifications.getExpoPushTokenAsync({
+          projectId: 'cv-connect-mobile-dev',
+        })).data;
+        console.log('✅ Got Expo push token:', token.substring(0, 20) + '...');
+      } catch (error) {
+        console.log('⚠️ Could not get Expo push token, using local notifications only:', error.message);
+        // For development, we'll use local notifications only
+        token = 'local-notifications-only';
+      }
     } else {
-      console.log('⚠️ Must use physical device for Push Notifications');
+      console.log('⚠️ Must use physical device for Push Notifications, using simulator mode');
+      token = 'simulator-mode';
     }
 
     this.expoPushToken = token;
