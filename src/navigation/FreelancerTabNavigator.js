@@ -18,6 +18,7 @@ import ProfileScreen from '../screens/freelancer/ProfileScreen';
 import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
 import InterviewDashboardScreen from '../screens/freelancer/InterviewDashboardScreen';
 import InterviewFeedbackScreen from '../screens/freelancer/InterviewFeedbackScreen';
+import NotificationSettingsScreen from '../screens/freelancer/NotificationSettingsScreen';
 
 import MessagesScreen from '../screens/freelancer/MessagesScreen';
 import ChatScreen from '../screens/common/ChatScreen';
@@ -96,6 +97,13 @@ const ProfileStack = () => {
         component={InterviewFeedbackScreen}
         options={{
           title: 'Interview Feedback',
+        }}
+      />
+      <Stack.Screen 
+        name="NotificationSettings" 
+        component={NotificationSettingsScreen}
+        options={{
+          title: 'Notification Settings',
         }}
       />
     </Stack.Navigator>

@@ -2231,6 +2231,45 @@ const ProfileScreen = ({ navigation }) => {
         </Card>
       )}
 
+      {/* Profile Options Section */}
+      {!isEditing && (
+        <Card style={styles.sectionCard} elevation={2}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Profile Options
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => navigation.navigate('HiringHistory')}
+            >
+              <View style={styles.optionContent}>
+                <MaterialCommunityIcons name="history" size={24} color="#FF6B35" />
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>Hiring History</Text>
+                  <Text style={styles.optionSubtitle}>View your hiring statistics and performance</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => navigation.navigate('NotificationSettings')}
+            >
+              <View style={styles.optionContent}>
+                <MaterialCommunityIcons name="bell" size={24} color="#FF6B35" />
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>Notification Settings</Text>
+                  <Text style={styles.optionSubtitle}>Manage your notification preferences</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+              </View>
+            </TouchableOpacity>
+          </Card.Content>
+        </Card>
+      )}
+
             {/* CV Viewer Modal */}
       {cvViewerVisible && profile?.cv?.stored_filename && (
         <CVViewer
@@ -3376,6 +3415,31 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  // Profile Options Styles
+  optionItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionText: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

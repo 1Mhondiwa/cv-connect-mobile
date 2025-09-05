@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { interviewAPI } from '../../services/api';
+import notificationService from '../../services/notificationService';
 
 // Async thunks
 export const getInterviews = createAsyncThunk(
@@ -203,6 +204,23 @@ const interviewSlice = createSlice({
         const index = state.interviews.findIndex(interview => interview.interview_id === interviewId);
         if (index !== -1) {
           state.interviews[index] = { ...state.interviews[index], ...updates };
+          
+          // Send notification for interview response
+          const interview = state.interviews[index];
+          if (updates.invitation_status === 'accepted') {
+            notificationService.sendInterviewScheduledNotification(
+              interviewId,
+              interview.request_title || 'Interview',
+              interview.scheduled_date
+            );
+            
+            // Schedule reminder for 30 minutes before
+            notificationService.scheduleInterviewReminder(
+              interviewId,
+              interview.scheduled_date,
+              interview.request_title || 'Interview'
+            );
+          }
         }
       })
       .addCase(respondToInvitation.rejected, (state, action) => {
@@ -238,6 +256,16 @@ const interviewSlice = createSlice({
       .addCase(submitFeedback.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = 'Feedback submitted successfully';
+        
+        // Send notification to freelancer about feedback
+        const { interviewId } = action.payload;
+        const interview = state.interviews.find(i => i.interview_id === interviewId);
+        if (interview) {
+          notificationService.sendInterviewFeedbackNotification(
+            interviewId,
+            interview.request_title || 'Interview'
+          );
+        }
       })
       .addCase(submitFeedback.rejected, (state, action) => {
         state.isLoading = false;
