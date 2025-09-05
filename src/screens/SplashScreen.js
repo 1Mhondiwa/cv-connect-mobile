@@ -18,6 +18,7 @@ const SplashScreen = ({ navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
@@ -40,10 +41,10 @@ const SplashScreen = ({ navigation }) => {
         friction: 3,
         useNativeDriver: true,
       }),
-      // Rotation animation
+      // Rotation animation (faster and more visible)
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 2000,
+        duration: 1500,
         useNativeDriver: true,
       }),
       // Text slide up
@@ -54,6 +55,26 @@ const SplashScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Start pulsing animation
+    startPulseAnimation();
+  };
+
+  const startPulseAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   };
 
   const rotate = rotateAnim.interpolate({
@@ -78,10 +99,14 @@ const SplashScreen = ({ navigation }) => {
               transform: [
                 { scale: scaleAnim },
                 { rotate: rotate },
+                { scale: pulseAnim },
               ],
             },
           ]}
         >
+          {/* Glow effect behind logo */}
+          <View style={styles.logoGlow} />
+          
           <View style={styles.logoCircle}>
             {logoError ? (
               <MaterialCommunityIcons
@@ -146,20 +171,42 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: 40,
+    position: 'relative',
+  },
+  logoGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    top: -10,
+    left: -10,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
   logoCircle: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    overflow: 'hidden',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
   logoImage: {
-    width: 70,
-    height: 70,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   textContainer: {
     alignItems: 'center',
