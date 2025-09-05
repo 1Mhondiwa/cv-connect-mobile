@@ -139,21 +139,6 @@ const SplashScreen = ({ navigation }) => {
           <Text style={styles.tagline}>Connecting Talent with Opportunity</Text>
         </Animated.View>
 
-        {/* Loading Indicator */}
-        <Animated.View
-          style={[
-            styles.loadingContainer,
-            {
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <View style={styles.loadingDots}>
-            <Animated.View style={[styles.dot, { opacity: fadeAnim }]} />
-            <Animated.View style={[styles.dot, { opacity: fadeAnim }]} />
-            <Animated.View style={[styles.dot, { opacity: fadeAnim }]} />
-          </View>
-        </Animated.View>
       </View>
     </LinearGradient>
   );
@@ -227,22 +212,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     fontWeight: '300',
-  },
-  loadingContainer: {
-    position: 'absolute',
-    bottom: 100,
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    marginHorizontal: 4,
   },
 });
 
