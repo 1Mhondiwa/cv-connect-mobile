@@ -45,6 +45,10 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
   const { myFeedback, isLoading, error, success } = useSelector((state) => state.interview);
   
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Get interview ID from route params
+  const interviewId = route?.params?.interviewId;
+  console.log('🎯 InterviewFeedbackScreen: Interview ID from params:', interviewId);
 
   // Load feedback on component mount
   useEffect(() => {
@@ -72,6 +76,49 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
       setRefreshing(false);
     });
   }, [dispatch]);
+
+  // Filter feedback data based on interview ID
+  const getFilteredFeedback = () => {
+    if (!myFeedback || !myFeedback.feedback_list) return null;
+    
+    if (interviewId) {
+      // Show only specific interview feedback
+      const specificInterview = myFeedback.feedback_list.find(interview => 
+        interview.interview_id === parseInt(interviewId)
+      );
+      
+      if (specificInterview) {
+        return {
+          feedback_list: [specificInterview],
+          summary: {
+            totalInterviews: 1,
+            feedbackReceived: specificInterview.feedback_id ? 1 : 0,
+            averageRating: specificInterview.overall_rating || 0,
+            hireRecommendations: specificInterview.recommendation === 'hire' ? 1 : 0,
+            maybeRecommendations: specificInterview.recommendation === 'maybe' ? 1 : 0,
+            noHireRecommendations: specificInterview.recommendation === 'no_hire' ? 1 : 0
+          }
+        };
+      } else {
+        return {
+          feedback_list: [],
+          summary: {
+            totalInterviews: 0,
+            feedbackReceived: 0,
+            averageRating: 0,
+            hireRecommendations: 0,
+            maybeRecommendations: 0,
+            noHireRecommendations: 0
+          }
+        };
+      }
+    }
+    
+    // Show all feedback if no specific interview ID
+    return myFeedback;
+  };
+
+  const filteredFeedback = getFilteredFeedback();
 
   // Render star rating
   const renderStarRating = (rating, maxRating = 5) => {
@@ -228,13 +275,15 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
 
   // Render summary stats
   const renderSummaryStats = () => {
-    if (!myFeedback || !myFeedback.summary) return null;
+    if (!filteredFeedback || !filteredFeedback.summary) return null;
 
-    const { summary } = myFeedback;
+    const { summary } = filteredFeedback;
     
     return (
       <Surface style={styles.summaryContainer}>
-        <Title style={styles.summaryTitle}>Your Interview Performance</Title>
+        <Title style={styles.summaryTitle}>
+          {interviewId ? 'Interview Feedback' : 'Your Interview Performance'}
+        </Title>
         <View style={styles.summaryStats}>
           <View style={styles.summaryStat}>
             <Text style={styles.summaryNumber}>{summary.totalInterviews || 0}</Text>
@@ -261,9 +310,14 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <MaterialCommunityIcons name="star-outline" size={64} color="#ccc" />
-      <Title style={styles.emptyTitle}>No Feedback Yet</Title>
+      <Title style={styles.emptyTitle}>
+        {interviewId ? 'No Feedback for This Interview' : 'No Feedback Yet'}
+      </Title>
       <Paragraph style={styles.emptyDescription}>
-        You haven't received any interview feedback yet. Complete some interviews to see your performance feedback here.
+        {interviewId 
+          ? 'This interview doesn\'t have any feedback yet. The associate may not have submitted feedback for this interview.'
+          : 'You haven\'t received any interview feedback yet. Complete some interviews to see your performance feedback here.'
+        }
       </Paragraph>
     </View>
   );
@@ -281,11 +335,11 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
             <ActivityIndicator size="large" color="#FF6B35" />
             <Text style={styles.loadingText}>Loading feedback...</Text>
           </View>
-        ) : myFeedback && myFeedback.feedback_list && myFeedback.feedback_list.length > 0 ? (
+        ) : filteredFeedback && filteredFeedback.feedback_list && filteredFeedback.feedback_list.length > 0 ? (
           <>
             {renderSummaryStats()}
             <View style={styles.feedbackList}>
-              {myFeedback.feedback_list.map(renderFeedbackCard)}
+              {filteredFeedback.feedback_list.map(renderFeedbackCard)}
             </View>
           </>
         ) : (
