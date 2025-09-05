@@ -76,11 +76,12 @@ const LandingScreen = ({ navigation }) => {
           </View>
           
           <Text style={styles.appTitle}>CV-Connect</Text>
-          <Text style={styles.appSubtitle}>
-            Your Gateway to Freelance Success
+          <Text style={styles.mainHeadline}>
+            Find Your Next
+            <Text style={styles.highlightText}> Freelance Opportunity</Text>
           </Text>
-          <Text style={styles.welcomeText}>
-            Connect with top employers, showcase your skills, and build your freelance career with our professional platform.
+          <Text style={styles.subHeadline}>
+            Connect with top employers, showcase your skills, and build your career
           </Text>
         </Animated.View>
       </LinearGradient>
@@ -90,6 +91,58 @@ const LandingScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* App Preview Section */}
+        <Animated.View
+          style={[
+            styles.appPreviewSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.phoneMockup}>
+            <View style={styles.phoneFrame}>
+              <View style={styles.phoneScreen}>
+                <View style={styles.mockupContent}>
+                  <View style={styles.mockupHeader}>
+                    <View style={styles.mockupLogo} />
+                    <Text style={styles.mockupTitle}>CV-Connect</Text>
+                  </View>
+                  <View style={styles.mockupFeatures}>
+                    <View style={styles.mockupFeature}>
+                      <View style={styles.mockupIcon} />
+                      <Text style={styles.mockupText}>Find Jobs</Text>
+                    </View>
+                    <View style={styles.mockupFeature}>
+                      <View style={styles.mockupIcon} />
+                      <Text style={styles.mockupText}>Video Interviews</Text>
+                    </View>
+                    <View style={styles.mockupFeature}>
+                      <View style={styles.mockupIcon} />
+                      <Text style={styles.mockupText}>Get Feedback</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Trust Indicators */}
+        <Animated.View
+          style={[
+            styles.trustSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.trustText}>
+            ✓ Free to join  ✓ No hidden fees  ✓ Secure platform
+          </Text>
+        </Animated.View>
 
         {/* Call to Action Buttons */}
         <Animated.View
@@ -103,24 +156,24 @@ const LandingScreen = ({ navigation }) => {
         >
           <Button
             mode="contained"
-            onPress={() => navigation.navigate('Login')}
-            style={styles.primaryButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={styles.buttonLabel}
-            icon="login"
+            onPress={() => navigation.navigate('Register')}
+            style={styles.primaryCTA}
+            contentStyle={styles.primaryCTAContent}
+            labelStyle={styles.primaryCTALabel}
+            icon="rocket-launch"
           >
-            Sign In
+            Get Started Free
           </Button>
           
           <Button
             mode="outlined"
-            onPress={() => navigation.navigate('Register')}
-            style={styles.secondaryButton}
-            contentStyle={styles.buttonContent}
-            labelStyle={[styles.buttonLabel, styles.outlinedButtonLabel]}
-            icon="account-plus"
+            onPress={() => navigation.navigate('Login')}
+            style={styles.secondaryCTA}
+            contentStyle={styles.secondaryCTAContent}
+            labelStyle={styles.secondaryCTALabel}
+            icon="login"
           >
-            Create Account
+            I Already Have an Account
           </Button>
         </Animated.View>
 
@@ -139,6 +192,13 @@ const LandingScreen = ({ navigation }) => {
           <Text style={styles.footerSubtext}>
             Join thousands of successful freelancers today
           </Text>
+          
+          {/* Social Proof */}
+          <View style={styles.socialProof}>
+            <Text style={styles.socialProofText}>
+              Trusted by 1000+ freelancers worldwide
+            </Text>
+          </View>
         </Animated.View>
       </ScrollView>
     </View>
@@ -176,27 +236,33 @@ const styles = StyleSheet.create({
     height: 50,
   },
   appTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  appSubtitle: {
-    fontSize: 18,
+  mainHeadline: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 32,
+  },
+  highlightText: {
+    color: '#FFE0B2',
+    fontWeight: 'bold',
+  },
+  subHeadline: {
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    fontWeight: '300',
-    marginBottom: 16,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    lineHeight: 20,
+    fontWeight: '400',
+    lineHeight: 22,
     paddingHorizontal: 20,
   },
   content: {
@@ -205,28 +271,123 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 30,
   },
+  appPreviewSection: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  phoneMockup: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  phoneFrame: {
+    width: 200,
+    height: 400,
+    backgroundColor: '#2C3E50',
+    borderRadius: 30,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  phoneScreen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  mockupContent: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  mockupHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  mockupLogo: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#FF6B35',
+    borderRadius: 20,
+    marginBottom: 10,
+  },
+  mockupTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
+  mockupFeatures: {
+    flex: 1,
+    justifyContent: 'space-around',
+  },
+  mockupFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  mockupIcon: {
+    width: 24,
+    height: 24,
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  mockupText: {
+    fontSize: 14,
+    color: '#2C3E50',
+    fontWeight: '500',
+  },
+  trustSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#F8F9FA',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  trustText: {
+    fontSize: 14,
+    color: '#2C3E50',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   ctaSection: {
     padding: 20,
   },
-  primaryButton: {
+  primaryCTA: {
     backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 3,
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 8,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  secondaryButton: {
+  primaryCTAContent: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  primaryCTALabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  secondaryCTA: {
     borderColor: '#FF6B35',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
+    backgroundColor: 'transparent',
   },
-  buttonContent: {
-    paddingVertical: 8,
+  secondaryCTAContent: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
   },
-  buttonLabel: {
+  secondaryCTALabel: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  outlinedButtonLabel: {
     color: '#FF6B35',
   },
   footer: {
@@ -234,15 +395,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#2C3E50',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   footerSubtext: {
     fontSize: 14,
     color: '#7F8C8D',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  socialProof: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  socialProofText: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: '500',
     textAlign: 'center',
   },
 });
