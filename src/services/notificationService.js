@@ -41,23 +41,23 @@ class NotificationService {
   async registerForPushNotificationsAsync() {
     let token;
 
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'CV Connect Notifications',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF6B35',
-        description: 'General notifications for CV Connect',
-      });
-      
-      await Notifications.setNotificationChannelAsync('interview', {
-        name: 'Interview Notifications',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#4A90E2',
-        description: 'Important interview-related notifications',
-      });
-    }
+          if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'CV Connect Notifications',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF6B35',
+          description: 'General notifications for CV Connect',
+        });
+        
+        await Notifications.setNotificationChannelAsync('interview', {
+          name: 'Interview Notifications',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#4A90E2',
+          description: 'Important interview-related notifications',
+        });
+      }
 
     if (Device.isDevice) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -74,7 +74,7 @@ class NotificationService {
       }
       
       try {
-        // Try to get Expo push token with a projectId
+        // Get Expo push token with projectId
         token = (await Notifications.getExpoPushTokenAsync({
           projectId: 'cv-connect-mobile-dev',
         })).data;
@@ -85,8 +85,7 @@ class NotificationService {
         token = 'local-notifications-only';
       }
     } else {
-      console.log('⚠️ Must use physical device for Push Notifications, using simulator mode');
-      token = 'simulator-mode';
+      console.log('⚠️ Must use physical device for Push Notifications');
     }
 
     this.expoPushToken = token;
