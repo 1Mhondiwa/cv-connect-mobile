@@ -77,46 +77,68 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
     });
   }, [dispatch]);
 
-  // Filter feedback data based on interview ID
-  const getFilteredFeedback = () => {
-    if (!myFeedback || !myFeedback.feedback_list) return null;
-    
-    if (interviewId) {
-      // Show only specific interview feedback
-      const specificInterview = myFeedback.feedback_list.find(interview => 
-        interview.interview_id === parseInt(interviewId)
-      );
-      
-      if (specificInterview) {
-        return {
-          feedback_list: [specificInterview],
-          summary: {
-            totalInterviews: 1,
-            feedbackReceived: specificInterview.feedback_id ? 1 : 0,
-            averageRating: specificInterview.overall_rating || 0,
-            hireRecommendations: specificInterview.recommendation === 'hire' ? 1 : 0,
-            maybeRecommendations: specificInterview.recommendation === 'maybe' ? 1 : 0,
-            noHireRecommendations: specificInterview.recommendation === 'no_hire' ? 1 : 0
-          }
-        };
-      } else {
-        return {
-          feedback_list: [],
-          summary: {
-            totalInterviews: 0,
-            feedbackReceived: 0,
-            averageRating: 0,
-            hireRecommendations: 0,
-            maybeRecommendations: 0,
-            noHireRecommendations: 0
-          }
-        };
-      }
-    }
-    
-    // Show all feedback if no specific interview ID
-    return myFeedback;
-  };
+     // Filter feedback data based on interview ID
+   const getFilteredFeedback = () => {
+     if (!myFeedback || !myFeedback.feedback_list) {
+       console.log('🚫 No feedback data available');
+       return null;
+     }
+     
+     console.log('🔍 Filtering feedback for interviewId:', interviewId);
+     console.log('📊 Available interviews:', myFeedback.feedback_list.map(i => ({
+       id: i.interview_id,
+       date: i.scheduled_date,
+       hasFeedback: !!i.feedback_id
+     })));
+     
+     if (interviewId) {
+       // Show only specific interview feedback
+       const specificInterview = myFeedback.feedback_list.find(interview => 
+         interview.interview_id === parseInt(interviewId)
+       );
+       
+       console.log('🎯 Specific interview found:', specificInterview ? 'YES' : 'NO');
+       if (specificInterview) {
+         console.log('📄 Interview details:', {
+           id: specificInterview.interview_id,
+           date: specificInterview.scheduled_date,
+           title: specificInterview.job_title,
+           hasFeedback: !!specificInterview.feedback_id
+         });
+       }
+       
+       if (specificInterview) {
+         return {
+           feedback_list: [specificInterview],
+           summary: {
+             totalInterviews: 1,
+             feedbackReceived: specificInterview.feedback_id ? 1 : 0,
+             averageRating: specificInterview.overall_rating || 0,
+             hireRecommendations: specificInterview.recommendation === 'hire' ? 1 : 0,
+             maybeRecommendations: specificInterview.recommendation === 'maybe' ? 1 : 0,
+             noHireRecommendations: specificInterview.recommendation === 'no_hire' ? 1 : 0
+           }
+         };
+       } else {
+         console.log('❌ No interview found with ID:', interviewId);
+         return {
+           feedback_list: [],
+           summary: {
+             totalInterviews: 0,
+             feedbackReceived: 0,
+             averageRating: 0,
+             hireRecommendations: 0,
+             maybeRecommendations: 0,
+             noHireRecommendations: 0
+           }
+         };
+       }
+     }
+     
+     // Show all feedback if no specific interview ID
+     console.log('📜 Showing all feedback (no specific interview ID)');
+     return myFeedback;
+   };
 
   const filteredFeedback = getFilteredFeedback();
 
@@ -335,14 +357,20 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
             <ActivityIndicator size="large" color="#FF6B35" />
             <Text style={styles.loadingText}>Loading feedback...</Text>
           </View>
-        ) : filteredFeedback && filteredFeedback.feedback_list && filteredFeedback.feedback_list.length > 0 ? (
-          <>
-            {renderSummaryStats()}
-            <View style={styles.feedbackList}>
-              {filteredFeedback.feedback_list.map(renderFeedbackCard)}
-            </View>
-          </>
-        ) : (
+                 ) : filteredFeedback && filteredFeedback.feedback_list && filteredFeedback.feedback_list.length > 0 ? (
+           <>
+             {/* Debug info */}
+             {console.log('🎨 Rendering feedback:', {
+               interviewId,
+               feedbackCount: filteredFeedback.feedback_list.length,
+               interviews: filteredFeedback.feedback_list.map(i => i.interview_id)
+             })}
+             {renderSummaryStats()}
+             <View style={styles.feedbackList}>
+               {filteredFeedback.feedback_list.map(renderFeedbackCard)}
+             </View>
+           </>
+         ) : (
           renderEmptyState()
         )}
       </ScrollView>
