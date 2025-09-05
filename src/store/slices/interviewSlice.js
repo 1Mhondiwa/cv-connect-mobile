@@ -253,6 +253,12 @@ const interviewSlice = createSlice({
         state.isLoading = false;
         // Backend returns { success: true, data: { interviews, summary } }
         const responseData = action.payload.data || action.payload;
+        console.log('📊 Processed feedback data:', {
+          interviews: responseData.interviews?.length || 0,
+          withFeedback: responseData.interviews?.filter(i => i.feedback_id).length || 0,
+          withoutFeedback: responseData.interviews?.filter(i => !i.feedback_id).length || 0,
+          summary: responseData.summary
+        });
         state.myFeedback = {
           feedback_list: responseData.interviews || [],
           summary: responseData.summary || {}

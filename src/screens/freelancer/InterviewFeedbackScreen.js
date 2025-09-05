@@ -105,88 +105,121 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
   );
 
   // Render feedback card
-  const renderFeedbackCard = (feedback) => (
-    <Card key={feedback.feedback_id || feedback.interview_id} style={styles.feedbackCard}>
+  const renderFeedbackCard = (interview) => (
+    <Card key={interview.interview_id} style={styles.feedbackCard}>
       <Card.Content>
         <View style={styles.feedbackHeader}>
           <View style={styles.feedbackInfo}>
             <Title style={styles.feedbackTitle}>
-              Interview for {feedback.job_title || 'Position'}
+              Interview for {interview.job_title || 'Position'}
             </Title>
             <Text style={styles.feedbackDate}>
-              {new Date(feedback.feedback_date || feedback.scheduled_date).toLocaleDateString('en-US', {
+              {new Date(interview.scheduled_date).toLocaleDateString('en-US', {
                 weekday: 'short',
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
               })}
             </Text>
+            <Text style={styles.interviewerText}>
+              {interview.company_industry} • Interviewed by {interview.interviewer_name}
+            </Text>
           </View>
-          <Chip
-            icon="star"
-            style={styles.ratingChip}
-            textStyle={styles.ratingChipText}
-          >
-            {feedback.overall_rating || 0}/5
-          </Chip>
+          {interview.feedback_id && (
+            <Chip
+              icon="star"
+              style={styles.ratingChip}
+              textStyle={styles.ratingChipText}
+            >
+              {interview.overall_rating || 0}/5
+            </Chip>
+          )}
         </View>
 
         <Divider style={styles.divider} />
 
-        {/* Overall Rating */}
-        <View style={styles.ratingSection}>
-          <Text style={styles.sectionTitle}>Overall Rating</Text>
-          {renderStarRating(feedback.overall_rating)}
-        </View>
+        {interview.feedback_id ? (
+          // Show feedback if it exists
+          <>
+            {/* Overall Rating */}
+            <View style={styles.ratingSection}>
+              <Text style={styles.sectionTitle}>Overall Rating</Text>
+              {renderStarRating(interview.overall_rating)}
+            </View>
 
-        {/* Recommendation */}
-        <View style={styles.recommendationSection}>
-          <Text style={styles.sectionTitle}>Recommendation</Text>
-          <Chip
-            icon={feedback.recommendation === 'hire' ? 'thumb-up' : feedback.recommendation === 'maybe' ? 'help' : 'thumb-down'}
-            style={[
-              styles.recommendationChip,
-              {
-                backgroundColor: feedback.recommendation === 'hire' ? '#28a745' : feedback.recommendation === 'maybe' ? '#ffc107' : '#dc3545',
-              },
-            ]}
-            textStyle={styles.recommendationChipText}
-          >
-            {feedback.recommendation === 'hire' ? 'Hire' : feedback.recommendation === 'maybe' ? 'Maybe' : 'No Hire'}
-          </Chip>
-        </View>
+            {/* Recommendation */}
+            <View style={styles.recommendationSection}>
+              <Text style={styles.sectionTitle}>Recommendation</Text>
+              <Chip
+                icon={interview.recommendation === 'hire' ? 'thumb-up' : interview.recommendation === 'maybe' ? 'help' : 'thumb-down'}
+                style={[
+                  styles.recommendationChip,
+                  {
+                    backgroundColor: interview.recommendation === 'hire' ? '#28a745' : interview.recommendation === 'maybe' ? '#ffc107' : '#dc3545',
+                  },
+                ]}
+                textStyle={styles.recommendationChipText}
+              >
+                {interview.recommendation === 'hire' ? 'Hire' : interview.recommendation === 'maybe' ? 'Maybe' : 'No Hire'}
+              </Chip>
+            </View>
 
-        {/* Skill Ratings */}
-        {(feedback.technical_skills_rating || feedback.communication_rating || feedback.cultural_fit_rating) && (
-          <View style={styles.skillsSection}>
-            <Text style={styles.sectionTitle}>Skill Ratings</Text>
-            {feedback.technical_skills_rating && renderSkillRating('Technical Skills', feedback.technical_skills_rating)}
-            {feedback.communication_rating && renderSkillRating('Communication', feedback.communication_rating)}
-            {feedback.cultural_fit_rating && renderSkillRating('Cultural Fit', feedback.cultural_fit_rating)}
-          </View>
-        )}
+            {/* Skill Ratings */}
+            {(interview.technical_skills_rating || interview.communication_rating || interview.cultural_fit_rating) && (
+              <View style={styles.skillsSection}>
+                <Text style={styles.sectionTitle}>Skill Ratings</Text>
+                {interview.technical_skills_rating && renderSkillRating('Technical Skills', interview.technical_skills_rating)}
+                {interview.communication_rating && renderSkillRating('Communication', interview.communication_rating)}
+                {interview.cultural_fit_rating && renderSkillRating('Cultural Fit', interview.cultural_fit_rating)}
+              </View>
+            )}
 
-        {/* Strengths */}
-        {feedback.strengths && (
-          <View style={styles.strengthsSection}>
-            <Text style={styles.sectionTitle}>Strengths</Text>
-            <Text style={styles.feedbackText}>{feedback.strengths}</Text>
-          </View>
-        )}
+            {/* Strengths */}
+            {interview.strengths && (
+              <View style={styles.strengthsSection}>
+                <Text style={styles.sectionTitle}>Strengths</Text>
+                <Text style={styles.feedbackText}>{interview.strengths}</Text>
+              </View>
+            )}
 
-        {/* Areas for Improvement */}
-        {feedback.areas_for_improvement && (
-          <View style={styles.improvementSection}>
-            <Text style={styles.sectionTitle}>Areas for Improvement</Text>
-            <Text style={styles.feedbackText}>{feedback.areas_for_improvement}</Text>
-          </View>
-        )}
+            {/* Areas for Improvement */}
+            {interview.areas_for_improvement && (
+              <View style={styles.improvementSection}>
+                <Text style={styles.sectionTitle}>Areas for Improvement</Text>
+                <Text style={styles.feedbackText}>{interview.areas_for_improvement}</Text>
+              </View>
+            )}
 
-        {/* Additional Comments */}
-        {feedback.detailed_feedback && (
-          <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>Detailed Feedback</Text>
-            <Text style={styles.feedbackText}>{feedback.detailed_feedback}</Text>
+            {/* Additional Comments */}
+            {interview.detailed_feedback && (
+              <View style={styles.commentsSection}>
+                <Text style={styles.sectionTitle}>Detailed Feedback</Text>
+                <Text style={styles.feedbackText}>{interview.detailed_feedback}</Text>
+              </View>
+            )}
+
+            {/* Feedback Date */}
+            {interview.feedback_date && (
+              <View style={styles.feedbackDateSection}>
+                <Text style={styles.feedbackDateText}>
+                  <MaterialCommunityIcons name="calendar" size={14} color="#666" />
+                  {' '}Feedback received on {new Date(interview.feedback_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          // Show pending feedback message
+          <View style={styles.pendingFeedbackSection}>
+            <MaterialCommunityIcons name="clock-outline" size={48} color="#ccc" />
+            <Text style={styles.pendingTitle}>Feedback Pending</Text>
+            <Text style={styles.pendingDescription}>
+              The associate hasn't submitted feedback for this interview yet.
+            </Text>
           </View>
         )}
       </Card.Content>
@@ -212,10 +245,12 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
             <Text style={styles.summaryLabel}>Avg Rating</Text>
           </View>
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryNumber}>
-              {summary.totalInterviews > 0 ? Math.round((summary.hireRecommendations / summary.totalInterviews) * 100) : 0}%
-            </Text>
-            <Text style={styles.summaryLabel}>Hire Rate</Text>
+            <Text style={styles.summaryNumber}>{summary.hireRecommendations || 0}</Text>
+            <Text style={styles.summaryLabel}>Hire Recommendations</Text>
+          </View>
+          <View style={styles.summaryStat}>
+            <Text style={styles.summaryNumber}>{summary.feedbackReceived || 0}</Text>
+            <Text style={styles.summaryLabel}>Feedback Received</Text>
           </View>
         </View>
       </Surface>
@@ -326,6 +361,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: spacing.xs,
   },
+  interviewerText: {
+    fontSize: fontSize.small,
+    color: '#888',
+    marginTop: spacing.xs,
+  },
   ratingChip: {
     backgroundColor: '#FF6B35',
   },
@@ -431,6 +471,33 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: spacing.small,
     textAlign: 'center',
+  },
+  pendingFeedbackSection: {
+    alignItems: 'center',
+    paddingVertical: spacing.large,
+  },
+  pendingTitle: {
+    fontSize: fontSize.medium,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: spacing.medium,
+    textAlign: 'center',
+  },
+  pendingDescription: {
+    fontSize: fontSize.small,
+    color: '#999',
+    marginTop: spacing.small,
+    textAlign: 'center',
+    paddingHorizontal: spacing.medium,
+  },
+  feedbackDateSection: {
+    marginTop: spacing.medium,
+    alignItems: 'flex-end',
+  },
+  feedbackDateText: {
+    fontSize: fontSize.small,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });
 
