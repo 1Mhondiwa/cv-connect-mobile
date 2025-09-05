@@ -37,28 +37,6 @@ const LandingScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  const features = [
-    {
-      icon: 'account-search',
-      title: 'Find Opportunities',
-      description: 'Discover freelance projects that match your skills',
-    },
-    {
-      icon: 'video',
-      title: 'Video Interviews',
-      description: 'Connect with clients through seamless video calls',
-    },
-    {
-      icon: 'star',
-      title: 'Get Feedback',
-      description: 'Receive detailed feedback to improve your performance',
-    },
-    {
-      icon: 'bell',
-      title: 'Real-time Notifications',
-      description: 'Stay updated with instant notifications',
-    },
-  ];
 
   return (
     <View style={styles.container}>
@@ -112,66 +90,6 @@ const LandingScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Features Section */}
-        <Animated.View
-          style={[
-            styles.featuresSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.sectionTitle}>Why Choose CV-Connect?</Text>
-          
-          {features.map((feature, index) => (
-            <Card key={index} style={styles.featureCard} elevation={2}>
-              <Card.Content style={styles.featureContent}>
-                <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons
-                    name={feature.icon}
-                    size={32}
-                    color="#FF6B35"
-                  />
-                </View>
-                <View style={styles.featureText}>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
-                  <Text style={styles.featureDescription}>
-                    {feature.description}
-                  </Text>
-                </View>
-              </Card.Content>
-            </Card>
-          ))}
-        </Animated.View>
-
-        {/* Stats Section */}
-        <Animated.View
-          style={[
-            styles.statsSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.sectionTitle}>Join Our Community</Text>
-          
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>1000+</Text>
-              <Text style={styles.statLabel}>Active Freelancers</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>500+</Text>
-              <Text style={styles.statLabel}>Completed Projects</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>95%</Text>
-              <Text style={styles.statLabel}>Success Rate</Text>
-            </View>
-          </View>
-        </Animated.View>
 
         {/* Call to Action Buttons */}
         <Animated.View
@@ -286,74 +204,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 30,
-  },
-  featuresSection: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  featureCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  featureContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  featureIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFF5F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  featureText: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    lineHeight: 18,
-  },
-  statsSection: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    textAlign: 'center',
   },
   ctaSection: {
     padding: 20,

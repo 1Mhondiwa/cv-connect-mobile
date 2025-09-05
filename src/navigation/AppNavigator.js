@@ -124,6 +124,9 @@ const AppNavigator = () => {
         }
         */
         
+        // Add minimum delay to show splash screen
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
         if (isMounted) {
           setIsInitialized(true);
         }

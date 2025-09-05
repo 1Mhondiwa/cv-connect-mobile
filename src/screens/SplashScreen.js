@@ -23,13 +23,6 @@ const SplashScreen = ({ navigation }) => {
   useEffect(() => {
     // Start animations
     startAnimations();
-    
-    // Navigate to landing after animations
-    const timer = setTimeout(() => {
-      navigation.replace('Landing');
-    }, 3000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   const startAnimations = () => {
