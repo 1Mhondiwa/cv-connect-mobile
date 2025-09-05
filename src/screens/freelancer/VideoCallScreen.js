@@ -8,6 +8,7 @@ import {
   Alert,
   BackHandler,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import {
   Surface,
@@ -20,6 +21,8 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { Camera } from 'expo-camera';
+import { Audio } from 'expo-av';
 
 // Responsive utilities
 import {
@@ -37,41 +40,42 @@ const VideoCallScreen = ({ navigation, route }) => {
   
   // Video call state
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [callStartTime, setCallStartTime] = useState(null);
   const [error, setError] = useState(null);
-  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState({
+    camera: null,
+    audio: null
+  });
+  const [cameraType, setCameraType] = useState(Camera.Constants.Type.front);
+  const [waitingMessage, setWaitingMessage] = useState('Connecting to interview...');
 
   // Refs
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+  const cameraRef = useRef(null);
   const callDurationInterval = useRef(null);
+  const connectionTimeout = useRef(null);
 
   // Handle back button
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        if (isConnected) {
-          Alert.alert(
-            'End Call',
-            'Are you sure you want to end this interview?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'End Call', style: 'destructive', onPress: endCall },
-            ]
-          );
-          return true;
-        }
-        return false;
+        Alert.alert(
+          'End Call',
+          'Are you sure you want to end this interview?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'End Call', style: 'destructive', onPress: endCall },
+          ]
+        );
+        return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [isConnected])
+    }, [])
   );
 
   // Initialize video call
@@ -103,25 +107,38 @@ const VideoCallScreen = ({ navigation, route }) => {
 
   const initializeVideoCall = async () => {
     try {
+      console.log('🎥 Initializing video call for interview:', interviewId);
       setIsConnecting(true);
       setError(null);
 
       // Request permissions
-      const hasPermission = await requestPermissions();
-      if (!hasPermission) {
+      const hasPermissions = await requestPermissions();
+      if (!hasPermissions) {
         setError('Camera and microphone permissions are required for video calls');
+        setIsConnecting(false);
         return;
       }
 
-      setPermissionGranted(true);
-
-      // Simulate connection process
+      // Simulate connection process with realistic timing
+      setWaitingMessage('Connecting to interview room...');
+      
+      // Simulate connection delay
       setTimeout(() => {
+        setWaitingMessage('Establishing secure connection...');
+      }, 1000);
+
+      setTimeout(() => {
+        setWaitingMessage('Waiting for associate to join...');
+      }, 2000);
+
+      // Auto-connect after 5 seconds to simulate successful connection
+      connectionTimeout.current = setTimeout(() => {
         setIsConnecting(false);
         setIsConnected(true);
         setCallStartTime(Date.now());
-        console.log('📹 Video call connected successfully');
-      }, 2000);
+        setWaitingMessage('');
+        console.log('✅ Video call connected successfully');
+      }, 5000);
 
     } catch (error) {
       console.error('❌ Error initializing video call:', error);
@@ -132,10 +149,37 @@ const VideoCallScreen = ({ navigation, route }) => {
 
   const requestPermissions = async () => {
     try {
-      // In a real implementation, you would request camera and microphone permissions
-      // For now, we'll simulate permission granted
       console.log('📹 Requesting camera and microphone permissions...');
-      return true;
+
+      // Request camera permission
+      const cameraStatus = await Camera.requestCameraPermissionsAsync();
+      console.log('📹 Camera permission status:', cameraStatus.status);
+
+      // Request microphone permission
+      const audioStatus = await Audio.requestPermissionsAsync();
+      console.log('🎤 Audio permission status:', audioStatus.status);
+
+      setPermissionStatus({
+        camera: cameraStatus.status,
+        audio: audioStatus.status
+      });
+
+      const hasPermissions = cameraStatus.status === 'granted' && audioStatus.status === 'granted';
+      
+      if (!hasPermissions) {
+        Alert.alert(
+          'Permissions Required',
+          'Camera and microphone access are required for video interviews. Please enable them in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => {
+              // You might want to use Linking.openSettings() here
+            }},
+          ]
+        );
+      }
+
+      return hasPermissions;
     } catch (error) {
       console.error('❌ Permission request failed:', error);
       return false;
@@ -152,15 +196,17 @@ const VideoCallScreen = ({ navigation, route }) => {
     console.log('📹 Video toggled:', !isVideoOn);
   };
 
-  const toggleScreenShare = () => {
-    setIsScreenSharing(!isScreenSharing);
-    console.log('🖥️ Screen share toggled:', !isScreenSharing);
+  const switchCamera = () => {
+    setCameraType(
+      cameraType === Camera.Constants.Type.back
+        ? Camera.Constants.Type.front
+        : Camera.Constants.Type.back
+    );
+    console.log('🔄 Camera switched');
   };
 
   const endCall = () => {
-    setIsConnected(false);
-    setCallStartTime(null);
-    setCallDuration(0);
+    console.log('📞 Ending video call');
     cleanup();
     navigation.goBack();
   };
@@ -169,277 +215,416 @@ const VideoCallScreen = ({ navigation, route }) => {
     if (callDurationInterval.current) {
       clearInterval(callDurationInterval.current);
     }
-    // In a real implementation, you would stop camera/microphone streams here
+    if (connectionTimeout.current) {
+      clearTimeout(connectionTimeout.current);
+    }
+    setIsConnected(false);
+    setIsConnecting(false);
   };
 
   const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderConnectingScreen = () => (
-    <View style={styles.connectingContainer}>
-      <ActivityIndicator size="large" color="#FF6B35" />
-      <Title style={styles.connectingTitle}>Connecting to Interview</Title>
-      <Paragraph style={styles.connectingSubtitle}>
-        {isHost ? 'Starting video call...' : 'Joining video call...'}
-      </Paragraph>
-      <Text style={styles.interviewTitle}>{interviewTitle || 'Interview'}</Text>
-    </View>
-  );
-
-  const renderErrorScreen = () => (
-    <View style={styles.errorContainer}>
-      <MaterialCommunityIcons name="alert-circle" size={64} color="#dc3545" />
-      <Title style={styles.errorTitle}>Connection Failed</Title>
-      <Paragraph style={styles.errorSubtitle}>{error}</Paragraph>
-      <Button
-        mode="contained"
-        onPress={initializeVideoCall}
-        style={styles.retryButton}
-        labelStyle={styles.buttonLabel}
-      >
-        Try Again
-      </Button>
-      <Button
-        mode="outlined"
-        onPress={() => navigation.goBack()}
-        style={styles.cancelButton}
-        labelStyle={styles.buttonLabel}
-      >
-        Cancel
-      </Button>
+  const renderConnectionScreen = () => (
+    <View style={styles.connectionScreen}>
+      <View style={styles.connectionContent}>
+        <MaterialCommunityIcons
+          name="video"
+          size={80}
+          color="#FF6B35"
+          style={styles.connectionIcon}
+        />
+        <Text style={styles.connectionTitle}>Interview Video Call</Text>
+        <Text style={styles.connectionSubtitle}>{interviewTitle}</Text>
+        
+        <ActivityIndicator 
+          size="large" 
+          color="#FF6B35" 
+          style={styles.loadingIndicator}
+        />
+        
+        <Text style={styles.connectionMessage}>{waitingMessage}</Text>
+        
+        <Button
+          mode="outlined"
+          onPress={endCall}
+          style={styles.cancelButton}
+          labelStyle={styles.cancelButtonLabel}
+        >
+          Cancel
+        </Button>
+      </View>
     </View>
   );
 
   const renderVideoCall = () => (
     <View style={styles.videoCallContainer}>
-      {/* Remote Video (Main) */}
-      <View style={styles.remoteVideoContainer}>
-        <Surface style={styles.remoteVideo}>
-          <View style={styles.remoteVideoPlaceholder}>
-            <MaterialCommunityIcons name="account" size={80} color="#666" />
-            <Text style={styles.remoteVideoText}>
-              {isHost ? 'Waiting for freelancer...' : 'Waiting for associate...'}
-            </Text>
+      {/* Main video area */}
+      <View style={styles.videoArea}>
+        {/* Remote video (larger) */}
+        <View style={styles.remoteVideoContainer}>
+          <View style={styles.remoteVideo}>
+            <View style={styles.remoteVideoPlaceholder}>
+              <MaterialCommunityIcons
+                name="account"
+                size={80}
+                color="#FFF"
+              />
+              <Text style={styles.remoteVideoText}>Associate</Text>
+            </View>
           </View>
-        </Surface>
-      </View>
+        </View>
 
-      {/* Local Video (Picture-in-Picture) */}
-      <View style={styles.localVideoContainer}>
-        <Surface style={styles.localVideo}>
-          <View style={styles.localVideoPlaceholder}>
-            <MaterialCommunityIcons name="account" size={40} color="#666" />
+        {/* Local video (smaller, overlay) */}
+        <View style={styles.localVideoContainer}>
+          {isVideoOn && permissionStatus.camera === 'granted' ? (
+            <Camera
+              ref={cameraRef}
+              style={styles.localVideo}
+              type={cameraType}
+              ratio="16:9"
+            >
+              <View style={styles.localVideoOverlay}>
+                <Text style={styles.localVideoText}>You</Text>
+              </View>
+            </Camera>
+          ) : (
+            <View style={styles.localVideoOff}>
+              <MaterialCommunityIcons
+                name="video-off"
+                size={30}
+                color="#FFF"
+              />
+              <Text style={styles.localVideoOffText}>Camera Off</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Call info overlay */}
+        <View style={styles.callInfoOverlay}>
+          <View style={styles.callInfo}>
+            <Text style={styles.callTitle}>{interviewTitle}</Text>
+            <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
           </View>
-        </Surface>
+        </View>
       </View>
 
-      {/* Call Info */}
-      <View style={styles.callInfoContainer}>
-        <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
-        <Text style={styles.callTitle}>{interviewTitle || 'Interview'}</Text>
-      </View>
-
-      {/* Controls */}
+      {/* Bottom controls */}
       <View style={styles.controlsContainer}>
-        <Surface style={styles.controls} elevation={8}>
-          <IconButton
-            icon={isMuted ? 'microphone-off' : 'microphone'}
-            size={32}
-            iconColor={isMuted ? '#dc3545' : '#fff'}
-            style={[styles.controlButton, isMuted && styles.controlButtonMuted]}
-            onPress={toggleMute}
-          />
-          
-          <IconButton
-            icon="phone-hangup"
-            size={32}
-            iconColor="#fff"
-            style={[styles.controlButton, styles.endCallButton]}
-            onPress={endCall}
-          />
-          
-          <IconButton
-            icon={isVideoOn ? 'video' : 'video-off'}
-            size={32}
-            iconColor={isVideoOn ? '#fff' : '#dc3545'}
-            style={[styles.controlButton, !isVideoOn && styles.controlButtonMuted]}
-            onPress={toggleVideo}
-          />
-          
-          <IconButton
-            icon={isScreenSharing ? 'monitor' : 'monitor-off'}
-            size={32}
-            iconColor={isScreenSharing ? '#28a745' : '#fff'}
-            style={[styles.controlButton, isScreenSharing && styles.controlButtonActive]}
-            onPress={toggleScreenShare}
-          />
+        <Surface style={styles.controlsBackground}>
+          <View style={styles.controlsRow}>
+            {/* Mute button */}
+            <IconButton
+              icon={isMuted ? "microphone-off" : "microphone"}
+              iconColor={isMuted ? "#FF4444" : "#FFFFFF"}
+              containerColor={isMuted ? "#FFE5E5" : "#4CAF50"}
+              size={30}
+              onPress={toggleMute}
+              style={styles.controlButton}
+            />
+
+            {/* Video toggle button */}
+            <IconButton
+              icon={isVideoOn ? "video" : "video-off"}
+              iconColor={isVideoOn ? "#FFFFFF" : "#FF4444"}
+              containerColor={isVideoOn ? "#4CAF50" : "#FFE5E5"}
+              size={30}
+              onPress={toggleVideo}
+              style={styles.controlButton}
+            />
+
+            {/* Switch camera button */}
+            <IconButton
+              icon="camera-flip"
+              iconColor="#FFFFFF"
+              containerColor="#6C757D"
+              size={30}
+              onPress={switchCamera}
+              style={styles.controlButton}
+            />
+
+            {/* End call button */}
+            <IconButton
+              icon="phone-hangup"
+              iconColor="#FFFFFF"
+              containerColor="#FF4444"
+              size={30}
+              onPress={endCall}
+              style={[styles.controlButton, styles.endCallButton]}
+            />
+          </View>
         </Surface>
       </View>
     </View>
   );
 
-  if (error) {
-    return renderErrorScreen();
-  }
+  const renderErrorScreen = () => (
+    <View style={styles.errorScreen}>
+      <View style={styles.errorContent}>
+        <MaterialCommunityIcons
+          name="alert-circle"
+          size={80}
+          color="#FF4444"
+          style={styles.errorIcon}
+        />
+        <Text style={styles.errorTitle}>Connection Error</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        
+        <View style={styles.errorButtons}>
+          <Button
+            mode="contained"
+            onPress={initializeVideoCall}
+            style={styles.retryButton}
+            labelStyle={styles.retryButtonLabel}
+          >
+            Try Again
+          </Button>
+          
+          <Button
+            mode="outlined"
+            onPress={endCall}
+            style={styles.cancelButton}
+            labelStyle={styles.cancelButtonLabel}
+          >
+            Cancel
+          </Button>
+        </View>
+      </div>
+    </View>
+  );
 
-  if (isConnecting) {
-    return renderConnectingScreen();
-  }
-
-  return renderVideoCall();
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      
+      {error ? renderErrorScreen() : 
+       isConnecting ? renderConnectionScreen() : 
+       renderVideoCall()}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-  connectingContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  
+  // Connection Screen
+  connectionScreen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
-    padding: spacing.large,
+    padding: spacing(20),
   },
-  connectingTitle: {
-    color: '#fff',
-    fontSize: fontSize.xlarge,
-    fontWeight: 'bold',
-    marginTop: spacing.large,
-    textAlign: 'center',
-  },
-  connectingSubtitle: {
-    color: '#ccc',
-    fontSize: fontSize.medium,
-    marginTop: spacing.small,
-    textAlign: 'center',
-  },
-  interviewTitle: {
-    color: '#FF6B35',
-    fontSize: fontSize.large,
-    fontWeight: '600',
-    marginTop: spacing.medium,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  connectionContent: {
     alignItems: 'center',
-    backgroundColor: '#000',
-    padding: spacing.large,
+    maxWidth: scale(300),
   },
-  errorTitle: {
-    color: '#dc3545',
-    fontSize: fontSize.xlarge,
+  connectionIcon: {
+    marginBottom: verticalScale(20),
+  },
+  connectionTitle: {
+    fontSize: fontSize(24),
     fontWeight: 'bold',
-    marginTop: spacing.large,
+    color: '#FFFFFF',
     textAlign: 'center',
+    marginBottom: verticalScale(8),
   },
-  errorSubtitle: {
-    color: '#ccc',
-    fontSize: fontSize.medium,
-    marginTop: spacing.small,
+  connectionSubtitle: {
+    fontSize: fontSize(16),
+    color: '#CCCCCC',
     textAlign: 'center',
-    marginBottom: spacing.large,
+    marginBottom: verticalScale(30),
   },
-  retryButton: {
-    backgroundColor: '#FF6B35',
-    marginBottom: spacing.medium,
-    paddingHorizontal: spacing.large,
+  loadingIndicator: {
+    marginBottom: verticalScale(20),
+  },
+  connectionMessage: {
+    fontSize: fontSize(14),
+    color: '#AAAAAA',
+    textAlign: 'center',
+    marginBottom: verticalScale(40),
   },
   cancelButton: {
-    borderColor: '#666',
-    paddingHorizontal: spacing.large,
+    borderColor: '#FF4444',
+    borderWidth: 2,
   },
-  buttonLabel: {
-    fontSize: fontSize.medium,
-    fontWeight: 'bold',
+  cancelButtonLabel: {
+    color: '#FF4444',
+    fontSize: fontSize(16),
   },
+
+  // Video Call Screen
   videoCallContainer: {
     flex: 1,
-    backgroundColor: '#000',
   },
-  remoteVideoContainer: {
+  videoArea: {
     flex: 1,
     position: 'relative',
   },
+  
+  // Remote Video
+  remoteVideoContainer: {
+    flex: 1,
+  },
   remoteVideo: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
   },
   remoteVideoPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#2A2A2A',
   },
   remoteVideoText: {
-    color: '#666',
-    fontSize: fontSize.medium,
-    marginTop: spacing.medium,
-    textAlign: 'center',
+    color: '#FFFFFF',
+    fontSize: fontSize(16),
+    marginTop: verticalScale(10),
   },
+
+  // Local Video
   localVideoContainer: {
     position: 'absolute',
-    top: spacing.large,
-    right: spacing.medium,
-    width: 120,
-    height: 160,
-    borderRadius: borderRadius.medium,
+    top: verticalScale(20),
+    right: scale(20),
+    width: scale(120),
+    height: verticalScale(160),
+    borderRadius: borderRadius(12),
     overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   localVideo: {
     flex: 1,
-    backgroundColor: '#2a2a2a',
+  },
+  localVideoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: spacing(4),
+  },
+  localVideoText: {
+    color: '#FFFFFF',
+    fontSize: fontSize(12),
+    textAlign: 'center',
+  },
+  localVideoOff: {
+    flex: 1,
+    backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  localVideoPlaceholder: {
-    alignItems: 'center',
+  localVideoOffText: {
+    color: '#FFFFFF',
+    fontSize: fontSize(10),
+    marginTop: verticalScale(4),
   },
-  callInfoContainer: {
+
+  // Call Info
+  callInfoOverlay: {
     position: 'absolute',
-    top: spacing.large,
-    left: spacing.medium,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: spacing.medium,
-    paddingVertical: spacing.small,
-    borderRadius: borderRadius.medium,
+    top: verticalScale(20),
+    left: scale(20),
+    right: scale(160), // Leave space for local video
   },
-  callDuration: {
-    color: '#fff',
-    fontSize: fontSize.large,
-    fontWeight: 'bold',
+  callInfo: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: spacing(12),
+    borderRadius: borderRadius(8),
   },
   callTitle: {
-    color: '#ccc',
-    fontSize: fontSize.small,
-    marginTop: spacing.xs,
+    color: '#FFFFFF',
+    fontSize: fontSize(14),
+    fontWeight: '600',
+    marginBottom: verticalScale(4),
   },
+  callDuration: {
+    color: '#4CAF50',
+    fontSize: fontSize(12),
+    fontWeight: '500',
+  },
+
+  // Controls
   controlsContainer: {
     position: 'absolute',
-    bottom: spacing.large,
+    bottom: 0,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    paddingBottom: verticalScale(40),
   },
-  controls: {
-    flexDirection: 'row',
+  controlsBackground: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: borderRadius.large,
-    paddingHorizontal: spacing.medium,
-    paddingVertical: spacing.small,
+    margin: scale(20),
+    borderRadius: borderRadius(50),
+    elevation: 8,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: verticalScale(16),
+    paddingHorizontal: scale(20),
   },
   controlButton: {
-    marginHorizontal: spacing.small,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  controlButtonMuted: {
-    backgroundColor: 'rgba(220, 53, 69, 0.8)',
-  },
-  controlButtonActive: {
-    backgroundColor: 'rgba(40, 167, 69, 0.8)',
+    margin: 0,
   },
   endCallButton: {
-    backgroundColor: '#dc3545',
+    marginLeft: scale(10),
+  },
+
+  // Error Screen
+  errorScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing(20),
+  },
+  errorContent: {
+    alignItems: 'center',
+    maxWidth: scale(300),
+  },
+  errorIcon: {
+    marginBottom: verticalScale(20),
+  },
+  errorTitle: {
+    fontSize: fontSize(24),
+    fontWeight: 'bold',
+    color: '#FF4444',
+    textAlign: 'center',
+    marginBottom: verticalScale(8),
+  },
+  errorMessage: {
+    fontSize: fontSize(14),
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: verticalScale(30),
+    lineHeight: fontSize(20),
+  },
+  errorButtons: {
+    width: '100%',
+    gap: verticalScale(12),
+  },
+  retryButton: {
+    backgroundColor: '#FF6B35',
+  },
+  retryButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: fontSize(16),
   },
 });
 

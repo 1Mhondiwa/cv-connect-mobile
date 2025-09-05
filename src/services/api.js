@@ -252,7 +252,7 @@ export const interviewAPI = {
   getInterviews: (params) => api.get('/interview/', { params }),
   
   // Respond to interview invitation
-  respondToInvitation: (invitationId, response) => api.post('/interview/respond', { invitation_id: invitationId, response }),
+  respondToInvitation: (interviewId, response) => api.post('/interview/respond', { interview_id: interviewId, response }),
   
   // Update interview status
   updateInterviewStatus: (interviewId, status) => api.put('/interview/status', { interview_id: interviewId, status }),

@@ -32,9 +32,9 @@ export const scheduleInterview = createAsyncThunk(
 
 export const respondToInvitation = createAsyncThunk(
   'interview/respondToInvitation',
-  async ({ invitationId, response }, { rejectWithValue }) => {
+  async ({ interviewId, response }, { rejectWithValue }) => {
     try {
-      const apiResponse = await interviewAPI.respondToInvitation(invitationId, response);
+      const apiResponse = await interviewAPI.respondToInvitation(interviewId, response);
       return apiResponse.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to respond to invitation');

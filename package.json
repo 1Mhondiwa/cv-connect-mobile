@@ -27,6 +27,8 @@
     "react-redux": "^9.2.0",
     "socket.io-client": "^4.8.1",
     "@expo/config-plugins": "~10.1.1",
-    "expo-linear-gradient": "~14.1.5"
+    "expo-linear-gradient": "~14.1.5",
+    "expo-camera": "~16.1.11",
+    "expo-av": "~15.1.7"
   }
 }

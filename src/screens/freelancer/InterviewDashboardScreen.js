@@ -113,7 +113,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
         {
           text: 'Confirm',
           onPress: () => {
-            dispatch(respondToInvitation({ invitationId: interviewId, response }));
+            dispatch(respondToInvitation({ interviewId: interviewId, response }));
           },
         },
       ]
@@ -236,7 +236,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
             <>
               <Button
                 mode="contained"
-                onPress={() => handleInterviewResponse(interview.interview_id, 'accept')}
+                onPress={() => handleInterviewResponse(interview.interview_id, 'accepted')}
                 style={[styles.actionButton, styles.acceptButton]}
                 labelStyle={styles.buttonLabel}
               >
@@ -244,7 +244,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
               </Button>
               <Button
                 mode="outlined"
-                onPress={() => handleInterviewResponse(interview.interview_id, 'decline')}
+                onPress={() => handleInterviewResponse(interview.interview_id, 'declined')}
                 style={[styles.actionButton, styles.declineButton]}
                 labelStyle={styles.buttonLabel}
               >
