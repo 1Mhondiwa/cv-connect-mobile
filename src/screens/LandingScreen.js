@@ -91,43 +91,6 @@ const LandingScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* App Preview Section */}
-        <Animated.View
-          style={[
-            styles.appPreviewSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.phoneMockup}>
-            <View style={styles.phoneFrame}>
-              <View style={styles.phoneScreen}>
-                <View style={styles.mockupContent}>
-                  <View style={styles.mockupHeader}>
-                    <View style={styles.mockupLogo} />
-                    <Text style={styles.mockupTitle}>CV-Connect</Text>
-                  </View>
-                  <View style={styles.mockupFeatures}>
-                    <View style={styles.mockupFeature}>
-                      <View style={styles.mockupIcon} />
-                      <Text style={styles.mockupText}>Find Jobs</Text>
-                    </View>
-                    <View style={styles.mockupFeature}>
-                      <View style={styles.mockupIcon} />
-                      <Text style={styles.mockupText}>Video Interviews</Text>
-                    </View>
-                    <View style={styles.mockupFeature}>
-                      <View style={styles.mockupIcon} />
-                      <Text style={styles.mockupText}>Get Feedback</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        </Animated.View>
 
         {/* Trust Indicators */}
         <Animated.View
@@ -143,6 +106,9 @@ const LandingScreen = ({ navigation }) => {
             ✓ Free to join  ✓ No hidden fees  ✓ Secure platform
           </Text>
         </Animated.View>
+
+        {/* Spacer */}
+        <View style={styles.spacer} />
 
         {/* Call to Action Buttons */}
         <Animated.View
@@ -230,10 +196,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
   },
   logoImage: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   appTitle: {
     fontSize: 28,
@@ -271,87 +239,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 30,
   },
-  appPreviewSection: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  phoneMockup: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  phoneFrame: {
-    width: 200,
-    height: 400,
-    backgroundColor: '#2C3E50',
-    borderRadius: 30,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  phoneScreen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  mockupContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  mockupHeader: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  mockupLogo: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#FF6B35',
-    borderRadius: 20,
-    marginBottom: 10,
-  },
-  mockupTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  mockupFeatures: {
-    flex: 1,
-    justifyContent: 'space-around',
-  },
-  mockupFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  mockupIcon: {
-    width: 24,
-    height: 24,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  mockupText: {
-    fontSize: 14,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
   trustSection: {
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 20,
     backgroundColor: '#F8F9FA',
     marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: 16,
+    marginTop: 20,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   trustText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#2C3E50',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  spacer: {
+    height: 20,
   },
   ctaSection: {
     padding: 20,
