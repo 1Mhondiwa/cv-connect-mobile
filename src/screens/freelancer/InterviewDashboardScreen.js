@@ -126,12 +126,16 @@ const InterviewDashboardScreen = ({ navigation }) => {
   };
 
   // Join video call
-  const joinVideoCall = (meetingLink) => {
-    if (meetingLink) {
-      Linking.openURL(meetingLink).catch(err => {
-        Alert.alert('Error', 'Could not open video call link');
-      });
-    }
+  const joinVideoCall = (interview) => {
+    console.log('🎥 Joining video call for interview:', interview.interview_id);
+    navigation.navigate('Profile', {
+      screen: 'VideoCall',
+      params: {
+        interviewId: interview.interview_id,
+        interviewTitle: interview.request_title || 'Interview',
+        isHost: false, // Freelancer is not the host
+      }
+    });
   };
 
   // Format date
@@ -255,7 +259,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
           {interview.status === 'confirmed' && (
             <Button
               mode="contained"
-              onPress={() => joinVideoCall(interview.meeting_link)}
+              onPress={() => joinVideoCall(interview)}
               style={[styles.actionButton, styles.joinButton]}
               labelStyle={styles.buttonLabel}
               icon="video"
@@ -267,7 +271,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
           {interview.status === 'in_progress' && (
             <Button
               mode="contained"
-              onPress={() => joinVideoCall(interview.meeting_link)}
+              onPress={() => joinVideoCall(interview)}
               style={[styles.actionButton, styles.joinButton]}
               labelStyle={styles.buttonLabel}
               icon="video"

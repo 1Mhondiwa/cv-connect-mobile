@@ -19,6 +19,7 @@ import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
 import InterviewDashboardScreen from '../screens/freelancer/InterviewDashboardScreen';
 import InterviewFeedbackScreen from '../screens/freelancer/InterviewFeedbackScreen';
 import NotificationSettingsScreen from '../screens/freelancer/NotificationSettingsScreen';
+import VideoCallScreen from '../screens/freelancer/VideoCallScreen';
 
 import MessagesScreen from '../screens/freelancer/MessagesScreen';
 import ChatScreen from '../screens/common/ChatScreen';
@@ -104,6 +105,14 @@ const ProfileStack = () => {
         component={NotificationSettingsScreen}
         options={{
           title: 'Notification Settings',
+        }}
+      />
+      <Stack.Screen 
+        name="VideoCall" 
+        component={VideoCallScreen}
+        options={{
+          title: 'Video Call',
+          headerShown: false, // Hide header for full-screen video call
         }}
       />
     </Stack.Navigator>
