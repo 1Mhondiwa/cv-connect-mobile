@@ -128,13 +128,10 @@ const InterviewDashboardScreen = ({ navigation }) => {
   // Join video call
   const joinVideoCall = (interview) => {
     console.log('🎥 Joining video call for interview:', interview.interview_id);
-    navigation.navigate('Profile', {
-      screen: 'VideoCall',
-      params: {
-        interviewId: interview.interview_id,
-        interviewTitle: interview.request_title || 'Interview',
-        isHost: false, // Freelancer is not the host
-      }
+    navigation.navigate('VideoCall', {
+      interviewId: interview.interview_id,
+      interviewTitle: interview.request_title || 'Interview',
+      isHost: false, // Freelancer is not the host
     });
   };
 
@@ -284,10 +281,9 @@ const InterviewDashboardScreen = ({ navigation }) => {
             <Button
               mode="outlined"
               onPress={() => {
-                // Navigate to feedback screen through Profile stack
-                navigation.navigate('Profile', { 
-                  screen: 'InterviewFeedback', 
-                  params: { interviewId: interview.interview_id } 
+                // Navigate to feedback screen within Interview stack
+                navigation.navigate('InterviewFeedback', { 
+                  interviewId: interview.interview_id 
                 });
               }}
               style={[styles.actionButton, styles.feedbackButton]}

@@ -62,6 +62,49 @@ const MessagesStack = () => {
   );
 };
 
+// Interview Stack Navigator
+const InterviewStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#FF6B35',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="InterviewMain" 
+        component={InterviewDashboardScreen}
+        options={{
+          title: 'Interviews',
+        }}
+      />
+      <Stack.Screen 
+        name="InterviewFeedback" 
+        component={InterviewFeedbackScreen}
+        options={{
+          title: 'Interview Feedback',
+        }}
+      />
+      <Stack.Screen 
+        name="VideoCall" 
+        component={VideoCallScreen}
+        options={{
+          title: 'Video Call',
+          headerShown: false, // Hide header for full-screen video call
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 // Profile Stack Navigator
 const ProfileStack = () => {
   return (
@@ -94,25 +137,10 @@ const ProfileStack = () => {
         }}
       />
       <Stack.Screen 
-        name="InterviewFeedback" 
-        component={InterviewFeedbackScreen}
-        options={{
-          title: 'Interview Feedback',
-        }}
-      />
-      <Stack.Screen 
         name="NotificationSettings" 
         component={NotificationSettingsScreen}
         options={{
           title: 'Notification Settings',
-        }}
-      />
-      <Stack.Screen 
-        name="VideoCall" 
-        component={VideoCallScreen}
-        options={{
-          title: 'Video Call',
-          headerShown: false, // Hide header for full-screen video call
         }}
       />
     </Stack.Navigator>
@@ -187,9 +215,10 @@ const FreelancerTabNavigator = () => {
 
       <Tab.Screen 
         name="Interviews" 
-        component={InterviewDashboardScreen}
+        component={InterviewStack}
         options={{
           title: 'Interviews',
+          headerShown: false, // Hide header since InterviewStack has its own
         }}
       />
 
