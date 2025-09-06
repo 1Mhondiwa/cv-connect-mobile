@@ -22,7 +22,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Camera } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-av'; // Will be updated to expo-audio in future
 
 // Responsive utilities
 import {
@@ -397,7 +397,7 @@ const VideoCallScreen = ({ navigation, route }) => {
             Cancel
           </Button>
         </View>
-      </div>
+      </View>
     </View>
   );
 
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing(20),
+    padding: spacing.lg,
   },
   connectionContent: {
     alignItems: 'center',
@@ -433,14 +433,14 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
   },
   connectionTitle: {
-    fontSize: fontSize(24),
+    fontSize: fontSize.xxxl,
     fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: verticalScale(8),
   },
   connectionSubtitle: {
-    fontSize: fontSize(16),
+    fontSize: fontSize.lg,
     color: '#CCCCCC',
     textAlign: 'center',
     marginBottom: verticalScale(30),
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
   },
   connectionMessage: {
-    fontSize: fontSize(14),
+    fontSize: fontSize.md,
     color: '#AAAAAA',
     textAlign: 'center',
     marginBottom: verticalScale(40),
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonLabel: {
     color: '#FF4444',
-    fontSize: fontSize(16),
+    fontSize: fontSize.lg,
   },
 
   // Video Call Screen
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   },
   remoteVideoText: {
     color: '#FFFFFF',
-    fontSize: fontSize(16),
+    fontSize: fontSize.lg,
     marginTop: verticalScale(10),
   },
 
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     right: scale(20),
     width: scale(120),
     height: verticalScale(160),
-    borderRadius: borderRadius(12),
+    borderRadius: borderRadius.md,
     overflow: 'hidden',
     elevation: 10,
     shadowColor: '#000',
@@ -516,11 +516,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: spacing(4),
+    padding: spacing.xs,
   },
   localVideoText: {
     color: '#FFFFFF',
-    fontSize: fontSize(12),
+    fontSize: fontSize.sm,
     textAlign: 'center',
   },
   localVideoOff: {
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   },
   localVideoOffText: {
     color: '#FFFFFF',
-    fontSize: fontSize(10),
+    fontSize: fontSize.xs,
     marginTop: verticalScale(4),
   },
 
@@ -544,18 +544,18 @@ const styles = StyleSheet.create({
   },
   callInfo: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: spacing(12),
-    borderRadius: borderRadius(8),
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
   },
   callTitle: {
     color: '#FFFFFF',
-    fontSize: fontSize(14),
+    fontSize: fontSize.md,
     fontWeight: '600',
     marginBottom: verticalScale(4),
   },
   callDuration: {
     color: '#4CAF50',
-    fontSize: fontSize(12),
+    fontSize: fontSize.sm,
     fontWeight: '500',
   },
 
@@ -569,8 +569,8 @@ const styles = StyleSheet.create({
   },
   controlsBackground: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    margin: scale(20),
-    borderRadius: borderRadius(50),
+    margin: spacing.lg,
+    borderRadius: borderRadius.round,
     elevation: 8,
   },
   controlsRow: {
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: verticalScale(16),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: spacing.lg,
   },
   controlButton: {
     margin: 0,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing(20),
+    padding: spacing.lg,
   },
   errorContent: {
     alignItems: 'center',
@@ -602,18 +602,18 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
   },
   errorTitle: {
-    fontSize: fontSize(24),
+    fontSize: fontSize.xxxl,
     fontWeight: 'bold',
     color: '#FF4444',
     textAlign: 'center',
     marginBottom: verticalScale(8),
   },
   errorMessage: {
-    fontSize: fontSize(14),
+    fontSize: fontSize.md,
     color: '#CCCCCC',
     textAlign: 'center',
     marginBottom: verticalScale(30),
-    lineHeight: fontSize(20),
+    lineHeight: fontSize.xxl,
   },
   errorButtons: {
     width: '100%',
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   },
   retryButtonLabel: {
     color: '#FFFFFF',
-    fontSize: fontSize(16),
+    fontSize: fontSize.lg,
   },
 });
 
