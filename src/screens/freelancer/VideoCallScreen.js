@@ -21,7 +21,7 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
 
 // Responsive utilities
@@ -56,7 +56,7 @@ const VideoCallScreen = ({ route, navigation }) => {
     camera: null,
     audio: null
   });
-  const [cameraType, setCameraType] = useState(CameraType.front);
+  const [cameraType, setCameraType] = useState('front');
 
   // Refs
   const cameraRef = useRef(null);
@@ -146,19 +146,27 @@ const VideoCallScreen = ({ route, navigation }) => {
       console.log('📹 Requesting camera and microphone permissions...');
 
       // Request camera permission using the new hook
-      if (!permission?.granted) {
+      let cameraGranted = false;
+      if (permission?.granted) {
+        cameraGranted = true;
+        console.log('📹 Camera permission already granted');
+      } else if (requestPermission) {
         const cameraResult = await requestPermission();
+        cameraGranted = cameraResult.granted;
         console.log('📹 Camera permission status:', cameraResult.granted);
+      } else {
+        console.log('📹 Camera permission hook not available, assuming granted');
+        cameraGranted = true; // Fallback for development
       }
 
       // Request microphone permission
       const audioStatus = await Audio.requestPermissionsAsync();
       console.log('🎤 Audio permission status:', audioStatus.status);
 
-      const hasPermissions = (permission?.granted || false) && audioStatus.status === 'granted';
+      const hasPermissions = cameraGranted && audioStatus.status === 'granted';
       
       setPermissionStatus({
-        camera: permission?.granted ? 'granted' : 'denied',
+        camera: cameraGranted ? 'granted' : 'denied',
         audio: audioStatus.status
       });
 
@@ -218,11 +226,11 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const switchCamera = () => {
     setCameraType(
-      cameraType === CameraType.back
-        ? CameraType.front
-        : CameraType.back
+      cameraType === 'back'
+        ? 'front'
+        : 'back'
     );
-    console.log('🔄 Camera switched to:', cameraType === CameraType.back ? 'front' : 'back');
+    console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
   };
 
   const endCall = async () => {
@@ -337,31 +345,31 @@ const VideoCallScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* Local video (smaller, overlay) */}
-        <View style={styles.localVideoContainer}>
-          {isVideoOn && permission?.granted ? (
-            <CameraView
-              ref={cameraRef}
-              style={styles.localVideo}
-              facing={cameraType}
-            >
-              <View style={styles.localVideoOverlay}>
-                <Text style={styles.localVideoText}>You</Text>
-              </View>
-            </CameraView>
-          ) : (
-            <View style={styles.localVideoOff}>
-              <MaterialCommunityIcons
-                name="video-off"
-                size={30}
-                color="#FFF"
-              />
-              <Text style={styles.localVideoOffText}>
-                {!permission?.granted ? 'Camera Permission Required' : 'Camera Off'}
-              </Text>
-            </View>
-          )}
-        </View>
+         {/* Local video (smaller, overlay) */}
+         <View style={styles.localVideoContainer}>
+           {isVideoOn && permissionStatus.camera === 'granted' ? (
+             <CameraView
+               ref={cameraRef}
+               style={styles.localVideo}
+               facing={cameraType}
+             >
+               <View style={styles.localVideoOverlay}>
+                 <Text style={styles.localVideoText}>You</Text>
+               </View>
+             </CameraView>
+           ) : (
+             <View style={styles.localVideoOff}>
+               <MaterialCommunityIcons
+                 name="video-off"
+                 size={30}
+                 color="#FFF"
+               />
+               <Text style={styles.localVideoOffText}>
+                 {permissionStatus.camera !== 'granted' ? 'Camera Permission Required' : 'Camera Off'}
+               </Text>
+             </View>
+           )}
+         </View>
 
         {/* Call duration */}
         {isConnected && (
