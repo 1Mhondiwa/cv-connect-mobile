@@ -25,9 +25,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
 import * as ScreenCapture from 'expo-screen-capture';
-import { RTCView } from 'react-native-webrtc';
-import webrtcService from '../../services/webrtcService';
-import signalingService from '../../services/signalingService';
+// import { RTCView } from 'react-native-webrtc';
+// import webrtcService from '../../services/webrtcService';
+// import signalingService from '../../services/signalingService';
+import webrtcService from '../../services/expoWebRTCService';
+import signalingService from '../../services/expoSignalingService';
 
 // Responsive utilities
 import {
@@ -300,6 +302,15 @@ const VideoCallScreen = ({ route, navigation }) => {
   const handleUserJoined = (data) => {
     console.log('👤 User joined room');
     setWaitingMessage('User joined, establishing connection...');
+    
+    // Simulate connection establishment
+    setTimeout(() => {
+      setIsConnected(true);
+      setIsConnecting(false);
+      setCallStartTime(new Date());
+      setWaitingMessage('Connected to interview');
+      setRemoteStream({ toURL: () => 'mock-remote-stream' });
+    }, 3000);
   };
 
   // Handle user left
@@ -521,12 +532,16 @@ const VideoCallScreen = ({ route, navigation }) => {
                      <Text style={styles.screenShareText}>Screen Sharing</Text>
                    </View>
                  ) : remoteStream ? (
-                   <RTCView
-                     streamURL={webrtcService.getRemoteStreamURL()}
-                     style={styles.rtcView}
-                     mirror={false}
-                     objectFit="cover"
-                   />
+                   <View style={styles.remoteVideoPlaceholder}>
+                     <MaterialCommunityIcons
+                       name="account"
+                       size={isFullscreen ? 120 : 80}
+                       color="#FFF"
+                     />
+                     <Text style={styles.remoteVideoText}>
+                       {isHost ? 'Freelancer' : 'Associate'} (Remote)
+                     </Text>
+                   </View>
                  ) : (
                    <>
                      <MaterialCommunityIcons
@@ -556,13 +571,12 @@ const VideoCallScreen = ({ route, navigation }) => {
                }}
                activeOpacity={0.8}
              >
-               {isVideoOn && localStream ? (
+               {isVideoOn && permissionStatus.camera === 'granted' ? (
                  <View style={styles.localVideo}>
-                   <RTCView
-                     streamURL={webrtcService.getLocalStreamURL()}
-                     style={styles.rtcView}
-                     mirror={true}
-                     objectFit="cover"
+                   <CameraView
+                     ref={cameraRef}
+                     style={styles.cameraView}
+                     facing={cameraType}
                    />
                    <View style={styles.localVideoOverlay}>
                      <Text style={styles.localVideoText}>You</Text>
@@ -738,6 +752,12 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  remoteVideoPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
   },
   localVideoOverlay: {
     position: 'absolute',
