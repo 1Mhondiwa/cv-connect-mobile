@@ -99,6 +99,8 @@ const InterviewStack = () => {
         options={{
           title: 'Video Call',
           headerShown: false, // Hide header for full-screen video call
+          gestureEnabled: false, // Disable swipe back gesture
+          presentation: 'modal', // Present as modal
         }}
       />
     </Stack.Navigator>
