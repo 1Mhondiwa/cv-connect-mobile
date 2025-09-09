@@ -309,8 +309,13 @@ const VideoCallScreen = ({ route, navigation }) => {
       setIsConnecting(false);
       setCallStartTime(new Date());
       setWaitingMessage('Connected to interview');
-      setRemoteStream({ toURL: () => 'mock-remote-stream' });
-    }, 3000);
+      setRemoteStream({ 
+        toURL: () => 'mock-remote-stream',
+        getTracks: () => [],
+        getVideoTracks: () => [],
+        getAudioTracks: () => []
+      });
+    }, 2000);
   };
 
   // Handle user left
@@ -534,13 +539,17 @@ const VideoCallScreen = ({ route, navigation }) => {
                  ) : remoteStream ? (
                    <View style={styles.remoteVideoPlaceholder}>
                      <MaterialCommunityIcons
-                       name="account"
+                       name="account-tie"
                        size={isFullscreen ? 120 : 80}
-                       color="#FFF"
+                       color="#FF6B35"
                      />
                      <Text style={styles.remoteVideoText}>
-                       {isHost ? 'Freelancer' : 'Associate'} (Remote)
+                       Associate Connected
                      </Text>
+                     <View style={styles.connectionIndicator}>
+                       <View style={styles.connectionDot} />
+                       <Text style={styles.connectionText}>Live</Text>
+                     </View>
                    </View>
                  ) : (
                    <>
@@ -758,6 +767,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#2a2a2a',
+  },
+  connectionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+    marginRight: spacing.xs,
+  },
+  connectionText: {
+    color: '#4CAF50',
+    fontSize: fontSize.xs,
+    fontWeight: 'bold',
   },
   localVideoOverlay: {
     position: 'absolute',
