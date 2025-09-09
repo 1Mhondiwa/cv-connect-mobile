@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   BackHandler,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import {
   Surface,
@@ -20,6 +21,8 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { Camera } from 'expo-camera';
+import { Audio } from 'expo-av';
 
 // Responsive utilities
 import {
@@ -48,6 +51,16 @@ const VideoCallScreen = ({ route, navigation }) => {
   const [callStartTime, setCallStartTime] = useState(null);
   const [error, setError] = useState(null);
   const [waitingMessage, setWaitingMessage] = useState('Connecting to interview...');
+  const [permissionStatus, setPermissionStatus] = useState({
+    camera: null,
+    audio: null
+  });
+  const [cameraType, setCameraType] = useState('front');
+
+  // Refs
+  const cameraRef = useRef(null);
+  const callDurationInterval = useRef(null);
+  const connectionTimeout = useRef(null);
 
   // Handle back button
   useFocusEffect(
@@ -96,6 +109,22 @@ const VideoCallScreen = ({ route, navigation }) => {
       setIsConnecting(true);
       setError(null);
 
+      // Request permissions
+      const hasPermissions = await requestPermissions();
+      if (!hasPermissions) {
+        setError('Camera and microphone permissions are required for video calls');
+        setIsConnecting(false);
+        return;
+      }
+
+      // Initialize audio mode
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
       // Simulate connection process
       setTimeout(() => {
         setIsConnected(true);
@@ -111,9 +140,72 @@ const VideoCallScreen = ({ route, navigation }) => {
     }
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    console.log('🔇 Mute toggled:', !isMuted);
+  const requestPermissions = async () => {
+    try {
+      console.log('📹 Requesting camera and microphone permissions...');
+
+      // Request camera permission
+      const cameraStatus = await Camera.requestCameraPermissionsAsync();
+      console.log('📹 Camera permission status:', cameraStatus.status);
+
+      // Request microphone permission
+      const audioStatus = await Audio.requestPermissionsAsync();
+      console.log('🎤 Audio permission status:', audioStatus.status);
+
+      const hasPermissions = cameraStatus.status === 'granted' && audioStatus.status === 'granted';
+      
+      setPermissionStatus({
+        camera: cameraStatus.status,
+        audio: audioStatus.status
+      });
+
+      if (!hasPermissions) {
+        Alert.alert(
+          'Permissions Required',
+          'Camera and microphone access are required for video interviews. Please enable them in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => {
+              // You can add Linking.openSettings() here if needed
+            }},
+          ]
+        );
+      }
+
+      return hasPermissions;
+    } catch (err) {
+      console.error('❌ Error requesting permissions:', err);
+      return false;
+    }
+  };
+
+  const toggleMute = async () => {
+    try {
+      if (isMuted) {
+        // Unmute - enable audio
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+        console.log('🔊 Audio unmuted');
+      } else {
+        // Mute - disable audio
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: false,
+          shouldDuckAndroid: false,
+          playThroughEarpieceAndroid: false,
+        });
+        console.log('🔇 Audio muted');
+      }
+      setIsMuted(!isMuted);
+    } catch (err) {
+      console.error('❌ Error toggling audio:', err);
+      // Still toggle the state even if audio mode fails
+      setIsMuted(!isMuted);
+    }
   };
 
   const toggleVideo = () => {
@@ -122,21 +214,49 @@ const VideoCallScreen = ({ route, navigation }) => {
   };
 
   const switchCamera = () => {
-    console.log('🔄 Camera switched');
+    setCameraType(
+      cameraType === 'back'
+        ? 'front'
+        : 'back'
+    );
+    console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
   };
 
-  const endCall = () => {
+  const endCall = async () => {
     console.log('📞 Ending video call');
-    cleanup();
+    await cleanup();
     navigation.goBack();
   };
 
-  const cleanup = () => {
+  const cleanup = async () => {
     console.log('🧹 Cleaning up video call resources');
     setIsConnected(false);
     setIsConnecting(false);
     setCallStartTime(null);
     setCallDuration(0);
+    
+    // Clear intervals
+    if (callDurationInterval.current) {
+      clearInterval(callDurationInterval.current);
+      callDurationInterval.current = null;
+    }
+    
+    if (connectionTimeout.current) {
+      clearTimeout(connectionTimeout.current);
+      connectionTimeout.current = null;
+    }
+
+    // Reset audio mode
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: false,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (err) {
+      console.error('❌ Error resetting audio mode:', err);
+    }
   };
 
   const formatDuration = (seconds) => {
@@ -165,6 +285,16 @@ const VideoCallScreen = ({ route, navigation }) => {
           >
             Try Again
           </Button>
+          {error.includes('permissions') && (
+            <Button
+              mode="outlined"
+              onPress={requestPermissions}
+              style={styles.permissionButton}
+              labelStyle={styles.buttonLabel}
+            >
+              Request Permissions
+            </Button>
+          )}
           <Button
             mode="outlined"
             onPress={endCall}
@@ -206,17 +336,17 @@ const VideoCallScreen = ({ route, navigation }) => {
 
         {/* Local video (smaller, overlay) */}
         <View style={styles.localVideoContainer}>
-          {isVideoOn ? (
-            <View style={styles.localVideo}>
-              <MaterialCommunityIcons
-                name="account"
-                size={30}
-                color="#FFF"
-              />
+          {isVideoOn && permissionStatus.camera === 'granted' ? (
+            <Camera
+              ref={cameraRef}
+              style={styles.localVideo}
+              type={cameraType}
+              ratio="16:9"
+            >
               <View style={styles.localVideoOverlay}>
                 <Text style={styles.localVideoText}>You</Text>
               </View>
-            </View>
+            </Camera>
           ) : (
             <View style={styles.localVideoOff}>
               <MaterialCommunityIcons
@@ -224,7 +354,9 @@ const VideoCallScreen = ({ route, navigation }) => {
                 size={30}
                 color="#FFF"
               />
-              <Text style={styles.localVideoOffText}>Camera Off</Text>
+              <Text style={styles.localVideoOffText}>
+                {permissionStatus.camera !== 'granted' ? 'Camera Permission Required' : 'Camera Off'}
+              </Text>
             </View>
           )}
         </View>
@@ -419,6 +551,10 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: spacing.xl,
     backgroundColor: '#FF6B35',
+  },
+  permissionButton: {
+    marginTop: spacing.md,
+    borderColor: '#FF6B35',
   },
   endCallButton: {
     marginTop: spacing.md,
