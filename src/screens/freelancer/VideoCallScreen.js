@@ -21,7 +21,7 @@ import {
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Camera } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
 
 // Responsive utilities
@@ -51,11 +51,12 @@ const VideoCallScreen = ({ route, navigation }) => {
   const [callStartTime, setCallStartTime] = useState(null);
   const [error, setError] = useState(null);
   const [waitingMessage, setWaitingMessage] = useState('Connecting to interview...');
+  const [permission, requestPermission] = useCameraPermissions();
   const [permissionStatus, setPermissionStatus] = useState({
     camera: null,
     audio: null
   });
-  const [cameraType, setCameraType] = useState('front');
+  const [cameraType, setCameraType] = useState(CameraType.front);
 
   // Refs
   const cameraRef = useRef(null);
@@ -144,18 +145,20 @@ const VideoCallScreen = ({ route, navigation }) => {
     try {
       console.log('📹 Requesting camera and microphone permissions...');
 
-      // Request camera permission
-      const cameraStatus = await Camera.requestCameraPermissionsAsync();
-      console.log('📹 Camera permission status:', cameraStatus.status);
+      // Request camera permission using the new hook
+      if (!permission?.granted) {
+        const cameraResult = await requestPermission();
+        console.log('📹 Camera permission status:', cameraResult.granted);
+      }
 
       // Request microphone permission
       const audioStatus = await Audio.requestPermissionsAsync();
       console.log('🎤 Audio permission status:', audioStatus.status);
 
-      const hasPermissions = cameraStatus.status === 'granted' && audioStatus.status === 'granted';
+      const hasPermissions = (permission?.granted || false) && audioStatus.status === 'granted';
       
       setPermissionStatus({
-        camera: cameraStatus.status,
+        camera: permission?.granted ? 'granted' : 'denied',
         audio: audioStatus.status
       });
 
@@ -215,11 +218,11 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const switchCamera = () => {
     setCameraType(
-      cameraType === 'back'
-        ? 'front'
-        : 'back'
+      cameraType === CameraType.back
+        ? CameraType.front
+        : CameraType.back
     );
-    console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
+    console.log('🔄 Camera switched to:', cameraType === CameraType.back ? 'front' : 'back');
   };
 
   const endCall = async () => {
@@ -336,17 +339,16 @@ const VideoCallScreen = ({ route, navigation }) => {
 
         {/* Local video (smaller, overlay) */}
         <View style={styles.localVideoContainer}>
-          {isVideoOn && permissionStatus.camera === 'granted' ? (
-            <Camera
+          {isVideoOn && permission?.granted ? (
+            <CameraView
               ref={cameraRef}
               style={styles.localVideo}
-              type={cameraType}
-              ratio="16:9"
+              facing={cameraType}
             >
               <View style={styles.localVideoOverlay}>
                 <Text style={styles.localVideoText}>You</Text>
               </View>
-            </Camera>
+            </CameraView>
           ) : (
             <View style={styles.localVideoOff}>
               <MaterialCommunityIcons
@@ -355,7 +357,7 @@ const VideoCallScreen = ({ route, navigation }) => {
                 color="#FFF"
               />
               <Text style={styles.localVideoOffText}>
-                {permissionStatus.camera !== 'granted' ? 'Camera Permission Required' : 'Camera Off'}
+                {!permission?.granted ? 'Camera Permission Required' : 'Camera Off'}
               </Text>
             </View>
           )}
