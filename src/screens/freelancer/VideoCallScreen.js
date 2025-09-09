@@ -9,6 +9,7 @@ import {
   BackHandler,
   Platform,
   PermissionsAndroid,
+  TouchableOpacity,
 } from 'react-native';
 import {
   Surface,
@@ -23,6 +24,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
+import * as ScreenCapture from 'expo-screen-capture';
 
 // Responsive utilities
 import {
@@ -57,6 +59,8 @@ const VideoCallScreen = ({ route, navigation }) => {
     audio: null
   });
   const [cameraType, setCameraType] = useState('front');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   // Refs
   const cameraRef = useRef(null);
@@ -233,6 +237,43 @@ const VideoCallScreen = ({ route, navigation }) => {
     console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    console.log('📱 Fullscreen toggled:', !isFullscreen);
+  };
+
+  const toggleScreenSharing = async () => {
+    try {
+      if (isScreenSharing) {
+        // Stop screen sharing
+        await ScreenCapture.stopScreenCaptureAsync();
+        setIsScreenSharing(false);
+        console.log('📺 Screen sharing stopped');
+      } else {
+        // Start screen sharing
+        const hasPermission = await ScreenCapture.requestPermissionsAsync();
+        if (hasPermission.granted) {
+          await ScreenCapture.startScreenCaptureAsync();
+          setIsScreenSharing(true);
+          console.log('📺 Screen sharing started');
+        } else {
+          Alert.alert(
+            'Permission Required',
+            'Screen recording permission is required for screen sharing.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error toggling screen sharing:', err);
+      Alert.alert(
+        'Screen Sharing Error',
+        'Failed to start/stop screen sharing. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const endCall = async () => {
     console.log('📞 Ending video call');
     await cleanup();
@@ -255,6 +296,16 @@ const VideoCallScreen = ({ route, navigation }) => {
     if (connectionTimeout.current) {
       clearTimeout(connectionTimeout.current);
       connectionTimeout.current = null;
+    }
+
+    // Stop screen sharing if active
+    if (isScreenSharing) {
+      try {
+        await ScreenCapture.stopScreenCaptureAsync();
+        setIsScreenSharing(false);
+      } catch (err) {
+        console.error('❌ Error stopping screen sharing:', err);
+      }
     }
 
     // Reset audio mode
@@ -323,53 +374,77 @@ const VideoCallScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* Main video area */}
-      <View style={styles.videoContainer}>
-        {isConnecting ? (
-          <View style={styles.connectingContainer}>
-            <ActivityIndicator size="large" color="#FF6B35" />
-            <Text style={styles.connectingText}>{waitingMessage}</Text>
-          </View>
-        ) : (
-          <View style={styles.remoteVideoContainer}>
-            <View style={styles.remoteVideo}>
-              <MaterialCommunityIcons
-                name="account"
-                size={80}
-                color="#FFF"
-              />
-              <Text style={styles.remoteVideoText}>
-                {isHost ? 'Freelancer' : 'Associate'}
-              </Text>
-            </View>
-          </View>
-        )}
-
-         {/* Local video (smaller, overlay) */}
-         <View style={styles.localVideoContainer}>
-           {isVideoOn && permissionStatus.camera === 'granted' ? (
-             <CameraView
-               ref={cameraRef}
-               style={styles.localVideo}
-               facing={cameraType}
+       {/* Main video area */}
+       <View style={styles.videoContainer}>
+         {isConnecting ? (
+           <View style={styles.connectingContainer}>
+             <ActivityIndicator size="large" color="#FF6B35" />
+             <Text style={styles.connectingText}>{waitingMessage}</Text>
+           </View>
+         ) : (
+           <>
+             {/* Remote video (other participant) */}
+             <TouchableOpacity 
+               style={isFullscreen ? styles.fullscreenVideo : styles.remoteVideoContainer}
+               onPress={toggleFullscreen}
+               activeOpacity={0.8}
              >
-               <View style={styles.localVideoOverlay}>
-                 <Text style={styles.localVideoText}>You</Text>
+               <View style={styles.remoteVideo}>
+                 {isScreenSharing ? (
+                   <View style={styles.screenShareContainer}>
+                     <MaterialCommunityIcons
+                       name="monitor"
+                       size={60}
+                       color="#FFF"
+                     />
+                     <Text style={styles.screenShareText}>Screen Sharing</Text>
+                   </View>
+                 ) : (
+                   <>
+                     <MaterialCommunityIcons
+                       name="account"
+                       size={isFullscreen ? 120 : 80}
+                       color="#FFF"
+                     />
+                     <Text style={styles.remoteVideoText}>
+                       {isHost ? 'Freelancer' : 'Associate'}
+                     </Text>
+                   </>
+                 )}
                </View>
-             </CameraView>
-           ) : (
-             <View style={styles.localVideoOff}>
-               <MaterialCommunityIcons
-                 name="video-off"
-                 size={30}
-                 color="#FFF"
-               />
-               <Text style={styles.localVideoOffText}>
-                 {permissionStatus.camera !== 'granted' ? 'Camera Permission Required' : 'Camera Off'}
-               </Text>
-             </View>
-           )}
-         </View>
+             </TouchableOpacity>
+
+             {/* Local video (yourself) */}
+             <TouchableOpacity 
+               style={isFullscreen ? styles.localVideoSmall : styles.localVideoContainer}
+               onPress={toggleFullscreen}
+               activeOpacity={0.8}
+             >
+               {isVideoOn && permissionStatus.camera === 'granted' ? (
+                 <CameraView
+                   ref={cameraRef}
+                   style={styles.localVideo}
+                   facing={cameraType}
+                 >
+                   <View style={styles.localVideoOverlay}>
+                     <Text style={styles.localVideoText}>You</Text>
+                   </View>
+                 </CameraView>
+               ) : (
+                 <View style={styles.localVideoOff}>
+                   <MaterialCommunityIcons
+                     name="video-off"
+                     size={isFullscreen ? 20 : 30}
+                     color="#FFF"
+                   />
+                   <Text style={[styles.localVideoOffText, isFullscreen && styles.localVideoOffTextSmall]}>
+                     {permissionStatus.camera !== 'granted' ? 'Camera Permission Required' : 'Camera Off'}
+                   </Text>
+                 </View>
+               )}
+             </TouchableOpacity>
+           </>
+         )}
 
         {/* Call duration */}
         {isConnected && (
@@ -381,46 +456,55 @@ const VideoCallScreen = ({ route, navigation }) => {
         )}
       </View>
 
-      {/* Bottom controls */}
-      <View style={styles.controlsContainer}>
-        <Surface style={styles.controlsSurface}>
-          <IconButton
-            icon={isMuted ? 'microphone-off' : 'microphone'}
-            iconColor="#FFFFFF"
-            containerColor={isMuted ? "#FF6B35" : "#6C757D"}
-            size={30}
-            onPress={toggleMute}
-            style={styles.controlButton}
-          />
+       {/* Bottom controls */}
+       <View style={styles.controlsContainer}>
+         <Surface style={styles.controlsSurface}>
+           <IconButton
+             icon={isMuted ? 'microphone-off' : 'microphone'}
+             iconColor="#FFFFFF"
+             containerColor={isMuted ? "#FF6B35" : "#6C757D"}
+             size={30}
+             onPress={toggleMute}
+             style={styles.controlButton}
+           />
 
-          <IconButton
-            icon="video"
-            iconColor="#FFFFFF"
-            containerColor="#6C757D"
-            size={30}
-            onPress={switchCamera}
-            style={styles.controlButton}
-          />
+           <IconButton
+             icon="camera-flip"
+             iconColor="#FFFFFF"
+             containerColor="#6C757D"
+             size={30}
+             onPress={switchCamera}
+             style={styles.controlButton}
+           />
 
-          <IconButton
-            icon={isVideoOn ? 'video' : 'video-off'}
-            iconColor="#FFFFFF"
-            containerColor={isVideoOn ? "#6C757D" : "#FF6B35"}
-            size={30}
-            onPress={toggleVideo}
-            style={styles.controlButton}
-          />
+           <IconButton
+             icon={isVideoOn ? 'video' : 'video-off'}
+             iconColor="#FFFFFF"
+             containerColor={isVideoOn ? "#6C757D" : "#FF6B35"}
+             size={30}
+             onPress={toggleVideo}
+             style={styles.controlButton}
+           />
 
-          <IconButton
-            icon="phone-hangup"
-            iconColor="#FFFFFF"
-            containerColor="#DC3545"
-            size={30}
-            onPress={endCall}
-            style={styles.controlButton}
-          />
-        </Surface>
-      </View>
+           <IconButton
+             icon={isScreenSharing ? 'monitor-off' : 'monitor'}
+             iconColor="#FFFFFF"
+             containerColor={isScreenSharing ? "#FF6B35" : "#6C757D"}
+             size={30}
+             onPress={toggleScreenSharing}
+             style={styles.controlButton}
+           />
+
+           <IconButton
+             icon="phone-hangup"
+             iconColor="#FFFFFF"
+             containerColor="#DC3545"
+             size={30}
+             onPress={endCall}
+             style={styles.controlButton}
+           />
+         </Surface>
+       </View>
     </View>
   );
 };
@@ -473,6 +557,33 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     overflow: 'hidden',
   },
+  localVideoSmall: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    width: scale(80),
+    height: scale(60),
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+  },
+  fullscreenVideo: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  screenShareContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+  },
+  screenShareText: {
+    color: '#FFF',
+    fontSize: fontSize.lg,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
   localVideo: {
     flex: 1,
     backgroundColor: '#4a4a4a',
@@ -503,6 +614,10 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: fontSize.xs,
     marginTop: spacing.xs,
+  },
+  localVideoOffTextSmall: {
+    fontSize: fontSize.xs - 2,
+    marginTop: spacing.xs - 2,
   },
   durationContainer: {
     position: 'absolute',
