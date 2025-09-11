@@ -25,10 +25,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
 import * as ScreenCapture from 'expo-screen-capture';
-import { RTCView } from 'react-native-webrtc';
+// import { RTCView } from 'react-native-webrtc';
 // import webrtcService from '../../services/webrtcService';
 // import signalingService from '../../services/signalingService';
-import RealWebRTCService from '../../services/realWebRTCService';
+import webrtcService from '../../services/expoWebRTCService';
 import signalingService from '../../services/expoSignalingService';
 
 // Responsive utilities
@@ -72,7 +72,6 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   // Refs
   const cameraRef = useRef(null);
-  const webrtcServiceRef = useRef(null);
   const callDurationInterval = useRef(null);
   const connectionTimeout = useRef(null);
 
@@ -139,44 +138,24 @@ const VideoCallScreen = ({ route, navigation }) => {
         playThroughEarpieceAndroid: false,
       });
 
-      // Initialize real WebRTC service
-      webrtcServiceRef.current = new RealWebRTCService();
+      // Initialize WebRTC
+      const isInitiator = isHost || false;
+      await webrtcService.initialize(isInitiator);
       
-      // Set up callbacks
-      webrtcServiceRef.current.onUserJoined = (data) => {
-        console.log('👤 User joined:', data);
-        setWaitingMessage('User joined, establishing connection...');
-      };
+      // Set up signaling service
+      setupSignaling();
 
-      webrtcServiceRef.current.onUserLeft = (data) => {
-        console.log('👤 User left:', data);
-        setWaitingMessage('User disconnected');
-        setIsConnected(false);
-      };
+      // Get local stream
+      const stream = await webrtcService.getUserMedia();
+      setLocalStream(stream);
 
-      webrtcServiceRef.current.onRemoteStream = (stream) => {
-        console.log('📹 Received remote stream');
-        setRemoteStream(stream);
-        setIsConnected(true);
-        setIsConnecting(false);
-        setCallStartTime(new Date());
-        setWaitingMessage('Connected to interview');
-      };
-
-      webrtcServiceRef.current.onConnectionStateChange = (state) => {
-        console.log('🔗 Connection state changed:', state);
-        setIsConnected(state === 'connected');
-      };
-
-      // Initialize WebRTC connection
+      // Connect to signaling server
+      signalingService.connect();
+      
+      // Join room
       const roomId = `interview-${interviewId}`;
       const userId = `freelancer-${Date.now()}`;
-      
-      await webrtcServiceRef.current.initialize('freelancer', userId, roomId);
-      
-      // Get local stream
-      const stream = webrtcServiceRef.current.getLocalStream();
-      setLocalStream(stream);
+      signalingService.joinRoom(roomId, userId);
 
       // Start connection process
       if (isInitiator) {
@@ -243,11 +222,9 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const toggleMute = async () => {
     try {
-      if (webrtcServiceRef.current) {
-        const audioEnabled = webrtcServiceRef.current.toggleAudio();
-        setIsMuted(!audioEnabled);
-        console.log('🔊 Audio toggled:', audioEnabled);
-      }
+      const audioEnabled = webrtcService.toggleAudio();
+      setIsMuted(!audioEnabled);
+      console.log('🔊 Audio toggled:', audioEnabled);
     } catch (err) {
       console.error('❌ Error toggling audio:', err);
     }
@@ -255,11 +232,9 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const toggleVideo = () => {
     try {
-      if (webrtcServiceRef.current) {
-        const videoEnabled = webrtcServiceRef.current.toggleVideo();
-        setIsVideoOn(videoEnabled);
-        console.log('📹 Video toggled:', videoEnabled);
-      }
+      const videoEnabled = webrtcService.toggleVideo();
+      setIsVideoOn(videoEnabled);
+      console.log('📹 Video toggled:', videoEnabled);
     } catch (err) {
       console.error('❌ Error toggling video:', err);
     }
@@ -267,11 +242,13 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const switchCamera = async () => {
     try {
-      if (webrtcServiceRef.current) {
-        const newFacingMode = await webrtcServiceRef.current.switchCamera();
-        setCameraType(newFacingMode === 'environment' ? 'back' : 'front');
-        console.log('📷 Camera switched to:', newFacingMode);
-      }
+      await webrtcService.switchCamera();
+      setCameraType(
+        cameraType === 'back'
+          ? 'front'
+          : 'back'
+      );
+      console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
     } catch (err) {
       console.error('❌ Error switching camera:', err);
     }
@@ -380,18 +357,43 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const toggleScreenSharing = async () => {
     try {
-      if (webrtcServiceRef.current) {
-        if (!isScreenSharing) {
-          const success = await webrtcServiceRef.current.startScreenShare();
-          setIsScreenSharing(success);
+      // Check if ScreenCapture is available
+      if (!ScreenCapture || !ScreenCapture.startScreenCaptureAsync) {
+        Alert.alert(
+          'Screen Sharing Unavailable',
+          'Screen sharing requires expo-screen-capture package. Please install it first.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (isScreenSharing) {
+        // Stop screen sharing
+        await ScreenCapture.stopScreenCaptureAsync();
+        setIsScreenSharing(false);
+        console.log('📺 Screen sharing stopped');
+      } else {
+        // Start screen sharing
+        const hasPermission = await ScreenCapture.requestPermissionsAsync();
+        if (hasPermission.granted) {
+          await ScreenCapture.startScreenCaptureAsync();
+          setIsScreenSharing(true);
+          console.log('📺 Screen sharing started');
         } else {
-          const success = await webrtcServiceRef.current.stopScreenShare();
-          setIsScreenSharing(!success);
+          Alert.alert(
+            'Permission Required',
+            'Screen recording permission is required for screen sharing.',
+            [{ text: 'OK' }]
+          );
         }
       }
     } catch (err) {
       console.error('❌ Error toggling screen sharing:', err);
-      Alert.alert('Error', 'Failed to toggle screen sharing');
+      Alert.alert(
+        'Screen Sharing Error',
+        'Failed to start/stop screen sharing. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -423,10 +425,7 @@ const VideoCallScreen = ({ route, navigation }) => {
     }
 
     // Clean up WebRTC resources
-    if (webrtcServiceRef.current) {
-      webrtcServiceRef.current.cleanup();
-      webrtcServiceRef.current = null;
-    }
+    webrtcService.cleanup();
 
     // Disconnect from signaling server
     signalingService.disconnect();
@@ -538,12 +537,20 @@ const VideoCallScreen = ({ route, navigation }) => {
                      <Text style={styles.screenShareText}>Screen Sharing</Text>
                    </View>
                  ) : remoteStream ? (
-                   <RTCView
-                     streamURL={remoteStream.toURL()}
-                     style={styles.rtcView}
-                     mirror={false}
-                     objectFit="cover"
-                   />
+                   <View style={styles.remoteVideoPlaceholder}>
+                     <MaterialCommunityIcons
+                       name="account-tie"
+                       size={isFullscreen ? 120 : 80}
+                       color="#FF6B35"
+                     />
+                     <Text style={styles.remoteVideoText}>
+                       Associate Connected
+                     </Text>
+                     <View style={styles.connectionIndicator}>
+                       <View style={styles.connectionDot} />
+                       <Text style={styles.connectionText}>Live</Text>
+                     </View>
+                   </View>
                  ) : (
                    <>
                      <MaterialCommunityIcons
@@ -573,13 +580,12 @@ const VideoCallScreen = ({ route, navigation }) => {
                }}
                activeOpacity={0.8}
              >
-               {isVideoOn && localStream ? (
+               {isVideoOn && permissionStatus.camera === 'granted' ? (
                  <View style={styles.localVideo}>
-                   <RTCView
-                     streamURL={localStream.toURL()}
-                     style={styles.rtcView}
-                     mirror={true}
-                     objectFit="cover"
+                   <CameraView
+                     ref={cameraRef}
+                     style={styles.cameraView}
+                     facing={cameraType}
                    />
                    <View style={styles.localVideoOverlay}>
                      <Text style={styles.localVideoText}>You</Text>

@@ -1,19 +1,20 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import config from '../config/config';
 
 // Create axios instance
-const API_BASE_URL = 'http://10.0.0.13:5000/api';
+const API_BASE_URL = config.API_BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Increased timeout
+  timeout: config.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
   // Retry configuration
-  retry: 3,
+  retry: config.RETRY_ATTEMPTS,
   retryDelay: (retryCount) => {
-    return retryCount * 1000; // time interval between retries
+    return retryCount * config.RETRY_DELAY; // time interval between retries
   }
 });
 

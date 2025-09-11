@@ -34,7 +34,8 @@
     "extra": {
       "eas": {
         "projectId": "cv-connect-mobile-dev"
-      }
+      },
+      "environment": "development"
     }
   }
 }
