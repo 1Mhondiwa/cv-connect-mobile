@@ -7,6 +7,7 @@ class SocketService {
     this.isConnected = false;
     this.messageHandlers = new Map();
     this.typingHandlers = new Map();
+    this.notificationHandlers = new Map();
   }
 
   async connect() {
@@ -17,7 +18,7 @@ class SocketService {
         return;
       }
 
-      this.socket = io('http://192.168.101.104:5000', {
+      this.socket = io('http://10.0.0.15:5000', {
         auth: {
           token: token
         },
@@ -54,6 +55,15 @@ class SocketService {
         console.error('Message error:', error);
       });
 
+      // Handle interview notifications
+      this.socket.on('notification', (notificationData) => {
+        console.log('📱 Received notification:', notificationData);
+        // Notify all registered notification handlers
+        this.notificationHandlers.forEach(handler => {
+          handler(notificationData);
+        });
+      });
+
     } catch (error) {
       console.error('Error connecting to WebSocket:', error);
     }
@@ -64,6 +74,22 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+    }
+  }
+
+  // Join user room for notifications
+  joinUserRoom(userId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('join_user_room', userId);
+      console.log(`📱 Joined user room: ${userId}`);
+    }
+  }
+
+  // Leave user room
+  leaveUserRoom(userId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('leave_user_room', userId);
+      console.log(`📱 Left user room: ${userId}`);
     }
   }
 
@@ -124,6 +150,18 @@ class SocketService {
   // Remove typing handler
   removeTypingHandler(handlerId) {
     this.typingHandlers.delete(handlerId);
+  }
+
+  // Register notification handler
+  onNotification(handler) {
+    const id = Date.now().toString();
+    this.notificationHandlers.set(id, handler);
+    return id; // Return handler ID for removal
+  }
+
+  // Remove notification handler
+  removeNotificationHandler(handlerId) {
+    this.notificationHandlers.delete(handlerId);
   }
 
   // Check if connected

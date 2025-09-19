@@ -14,6 +14,8 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import socketService from '../../services/socketService';
 import VisitorTrackingService from '../../services/visitorTracking';
+import { useDispatch as useNotificationDispatch, useSelector as useNotificationSelector } from 'react-redux';
+import { addNotification, fetchNotifications, markNotificationAsRead } from '../../store/slices/notificationSlice';
 
 import { profileAPI } from '../../services/api';
 import { updateAvailability, getProfile } from '../../store/slices/freelancerSlice';
@@ -56,8 +58,10 @@ const getActivityColor = (status) => {
 
 const DashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
+    const notificationDispatch = useNotificationDispatch();
     const { user, token } = useSelector((state) => state.auth);
     const { dashboardData, profile, skills, isLoading } = useSelector((state) => state.freelancer);
+    const { notifications, unreadCount, isLoading: notificationsLoading } = useNotificationSelector((state) => state.notifications);
     // Debug logging for component state
     console.log('🚀 DashboardScreen rendered');
     console.log('🚀 user:', user);
@@ -86,6 +90,8 @@ const DashboardScreen = ({ navigation }) => {
     }, 1000);
     // Fetch hiring data
     fetchHiringData();
+    // Fetch notifications
+    fetchNotificationData();
     setupRealTimeUpdates();
     
     return () => {
@@ -133,13 +139,57 @@ const DashboardScreen = ({ navigation }) => {
       socketService.connect();
     }
 
+    // Join user room for notifications
+    if (user?.user_id) {
+      socketService.joinUserRoom(user.user_id);
+    }
+
     // Register message handler for real-time updates
-    const handlerId = socketService.onMessage((message) => {
+    const messageHandlerId = socketService.onMessage((message) => {
       console.log('📨 Real-time message received:', message);
       
       // Note: Message count updates are now handled by navigation badge
       // The Redux store will automatically update the unread count
     });
+
+    // Register notification handler for interview notifications
+    const notificationHandlerId = socketService.onNotification((notificationData) => {
+      console.log('📱 Interview notification received:', notificationData);
+      
+      if (notificationData.type === 'interview_notification') {
+        notificationDispatch(addNotification(notificationData.notification));
+      }
+    });
+
+    // Store handler IDs for cleanup (you might want to store these in component state)
+    return { messageHandlerId, notificationHandlerId };
+  };
+
+  const fetchNotificationData = async () => {
+    try {
+      console.log('📱 Fetching notifications...');
+      await notificationDispatch(fetchNotifications({ limit: 20 })).unwrap();
+      console.log('📱 Notifications fetched successfully');
+    } catch (error) {
+      console.error('❌ Failed to fetch notifications:', error);
+    }
+  };
+
+  const handleNotificationPress = async (notification) => {
+    try {
+      // Mark notification as read
+      if (!notification.is_read) {
+        await notificationDispatch(markNotificationAsRead(notification.notification_id)).unwrap();
+      }
+
+      // Navigate based on notification type
+      if (notification.notification_type.includes('interview')) {
+        // Navigate to interviews screen or show interview details
+        navigation.navigate('Interviews');
+      }
+    } catch (error) {
+      console.error('❌ Failed to handle notification press:', error);
+    }
   };
 
   
@@ -334,6 +384,45 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </Surface>
+
+      {/* Interview Notifications Section */}
+      {unreadCount > 0 && (
+        <View style={styles.notificationContainer}>
+          <Card style={styles.notificationCard} elevation={3}>
+            <Card.Content style={styles.notificationContent}>
+              <View style={styles.notificationHeader}>
+                <MaterialCommunityIcons name="bell" size={24} color="#FF6B35" />
+                <Text style={styles.notificationTitle}>
+                  Interview Notifications ({unreadCount})
+                </Text>
+              </View>
+              {notifications.slice(0, 3).map((notification, index) => (
+                <TouchableOpacity
+                  key={notification.notification_id}
+                  style={[
+                    styles.notificationItem,
+                    !notification.is_read && styles.unreadNotification
+                  ]}
+                  onPress={() => handleNotificationPress(notification)}
+                >
+                  <View style={styles.notificationContent}>
+                    <Text style={[
+                      styles.notificationMessage,
+                      !notification.is_read && styles.unreadNotificationText
+                    ]}>
+                      {notification.title}
+                    </Text>
+                    <Text style={styles.notificationTime}>
+                      {new Date(notification.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  {!notification.is_read && <View style={styles.unreadDot} />}
+                </TouchableOpacity>
+              ))}
+            </Card.Content>
+          </Card>
+        </View>
+      )}
 
       {/* Availability Status Toggle - Prominent and Easy Access */}
       <View style={styles.availabilityContainer}>
@@ -860,6 +949,65 @@ const styles = StyleSheet.create({
     fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     fontWeight: '600',
     color: '#FF6B35',
+    marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
+  },
+
+  // Notification styles
+  notificationContainer: {
+    marginHorizontal: responsive.ifTablet(spacing.lg, spacing.md),
+    marginVertical: responsive.ifTablet(spacing.sm, spacing.sm),
+  },
+  notificationCard: {
+    backgroundColor: '#FFF9F7',
+    borderRadius: responsive.ifTablet(spacing.md, spacing.sm),
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B35',
+  },
+  notificationContent: {
+    padding: responsive.ifTablet(spacing.md, spacing.sm),
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: responsive.ifTablet(spacing.sm, spacing.sm),
+  },
+  notificationTitle: {
+    fontSize: responsive.ifTablet(fontSize.lg, fontSize.md),
+    fontWeight: '600',
+    color: '#FF6B35',
+    marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: responsive.ifTablet(spacing.sm, spacing.sm),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  unreadNotification: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: responsive.ifTablet(spacing.sm, spacing.sm),
+    marginVertical: responsive.ifTablet(spacing.xs, spacing.xs),
+  },
+  notificationMessage: {
+    flex: 1,
+    fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
+    color: '#333',
+    marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+  },
+  unreadNotificationText: {
+    fontWeight: '600',
+    color: '#FF6B35',
+  },
+  notificationTime: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#666',
+  },
+  unreadDot: {
+    width: responsive.ifTablet(scale(8), scale(6)),
+    height: responsive.ifTablet(scale(8), scale(6)),
+    borderRadius: responsive.ifTablet(scale(4), scale(3)),
+    backgroundColor: '#FF6B35',
     marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
   },
 

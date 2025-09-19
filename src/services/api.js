@@ -272,6 +272,12 @@ export const interviewAPI = {
   
   // End video call (update interview status to completed)
   endVideoCall: (interviewId) => api.put('/interview/status', { interview_id: interviewId, status: 'completed' }),
+  
+  // Get user notifications
+  getNotifications: (params = {}) => api.get('/interview/notifications', { params }),
+  
+  // Mark notification as read
+  markNotificationAsRead: (notificationId) => api.put(`/interview/notifications/${notificationId}/read`),
 };
 
 // Token management

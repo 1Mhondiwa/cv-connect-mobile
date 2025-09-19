@@ -7,6 +7,7 @@ import freelancerReducer from './slices/freelancerSlice';
 import adminReducer from './slices/adminSlice';
 import associateReducer from './slices/associateSlice';
 import interviewReducer from './slices/interviewSlice';
+import notificationReducer from './slices/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     admin: adminReducer,
     associate: associateReducer,
     interview: interviewReducer,
+    notifications: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
