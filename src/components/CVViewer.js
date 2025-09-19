@@ -15,7 +15,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Conditional import to prevent runtime errors
 let Pdf = null;
 try {
-  Pdf = require('react-native-pdf').default;
+  const PdfModule = require('react-native-pdf');
+  // Check if the module is properly initialized
+  if (PdfModule && typeof PdfModule.default === 'function') {
+    Pdf = PdfModule.default;
+  } else {
+    console.log('PDF viewer module not properly initialized');
+  }
 } catch (error) {
   console.log('PDF viewer not available:', error.message);
 }
@@ -98,8 +104,6 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
     const alternativeUrls = [
       `http://10.254.121.136:5000/uploads/cvs/${storedFilename}`,
       `http://10.254.121.136:5000/cv/${storedFilename}`,
-      `http://10.254.121.136:8081/uploads/cvs/${storedFilename}`,
-      `http://10.254.121.136:8081/cv/${storedFilename}`,
     ];
     
     for (const altUrl of alternativeUrls) {
@@ -261,24 +265,40 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
           
           {/* PDF Content */}
           <View style={styles.pdfContent}>
-            <Pdf
-              source={{ uri: validUrl }}
-              style={styles.pdf}
-              onLoadComplete={(numberOfPages, filePath) => {
-                console.log(`PDF loaded: ${numberOfPages} pages`);
-              }}
-              onPageChanged={(page, numberOfPages) => {
-                console.log(`Page changed to: ${page}/${numberOfPages}`);
-              }}
-              onError={(error) => {
-                console.error('PDF error:', error);
-                Alert.alert('PDF Error', 'Failed to load PDF. Please try again.');
-                setShowPdfViewer(false);
-              }}
-              onPressLink={(uri) => {
-                console.log(`Link pressed: ${uri}`);
-              }}
-            />
+            {Pdf ? (
+              <Pdf
+                source={{ uri: validUrl }}
+                style={styles.pdf}
+                onLoadComplete={(numberOfPages, filePath) => {
+                  console.log(`PDF loaded: ${numberOfPages} pages`);
+                }}
+                onPageChanged={(page, numberOfPages) => {
+                  console.log(`Page changed to: ${page}/${numberOfPages}`);
+                }}
+                onError={(error) => {
+                  console.error('PDF error:', error);
+                  Alert.alert('PDF Error', 'Failed to load PDF. Please try again.');
+                  setShowPdfViewer(false);
+                }}
+                onPressLink={(uri) => {
+                  console.log(`Link pressed: ${uri}`);
+                }}
+              />
+            ) : (
+              <View style={styles.pdfErrorContainer}>
+                <MaterialCommunityIcons name="file-pdf-box" size={80} color="#FF6B35" />
+                <Text style={styles.pdfErrorText}>PDF Viewer Not Available</Text>
+                <Text style={styles.pdfErrorSubtext}>
+                  Please use the browser to view this PDF file.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.browserButton}
+                  onPress={() => Linking.openURL(validUrl)}
+                >
+                  <Text style={styles.browserButtonText}>Open in Browser</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -573,6 +593,43 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 5,
     textAlign: 'center',
+  },
+  pdfErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+  },
+  pdfErrorText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  pdfErrorSubtext: {
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  browserButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  browserButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

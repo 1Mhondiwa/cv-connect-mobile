@@ -23,7 +23,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 import * as ScreenCapture from 'expo-screen-capture';
 // import { RTCView } from 'react-native-webrtc';
 // import webrtcService from '../../services/webrtcService';

@@ -76,7 +76,7 @@ class NotificationService {
       try {
         // Get Expo push token with projectId
         token = (await Notifications.getExpoPushTokenAsync({
-          projectId: 'cv-connect-mobile-dev',
+          projectId: '550e8400-e29b-41d4-a716-446655440000',
         })).data;
         console.log('✅ Got Expo push token:', token.substring(0, 20) + '...');
       } catch (error) {

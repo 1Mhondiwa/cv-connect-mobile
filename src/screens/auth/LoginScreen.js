@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, setToken, setUser } from '../../store/slices/authSlice';
 import { getProfile } from '../../store/slices/freelancerSlice';
 import { tokenService } from '../../services/api';
+import VisitorTrackingService from '../../services/visitorTracking';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const LoginScreen = ({ navigation }) => {
@@ -39,6 +40,16 @@ const LoginScreen = ({ navigation }) => {
       console.log('Attempting login with:', { email, password: '***' });
       const result = await dispatch(login({ email, password })).unwrap();
       console.log('Login successful:', result);
+      
+      // Track mobile login visit
+      if (result.user) {
+        try {
+          await VisitorTrackingService.trackLogin(result.user.user_id);
+          console.log('📱 Mobile login visit tracked');
+        } catch (trackingError) {
+          console.log('📱 Mobile login tracking error:', trackingError);
+        }
+      }
       
       // After successful login, fetch profile to check CV status
       if (result.user && result.user.user_type === 'freelancer') {

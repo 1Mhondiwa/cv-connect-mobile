@@ -13,6 +13,7 @@ import { useSelector, useDispatch } from 'react-redux';
 
 
 import socketService from '../../services/socketService';
+import VisitorTrackingService from '../../services/visitorTracking';
 
 import { profileAPI } from '../../services/api';
 import { updateAvailability, getProfile } from '../../store/slices/freelancerSlice';
@@ -148,6 +149,16 @@ const DashboardScreen = ({ navigation }) => {
       // Dashboard data is loaded via Redux store
       // The component will automatically re-render when the store updates
       console.log('✅ Dashboard data loading handled by Redux store');
+      
+      // Track mobile dashboard visit
+      if (user?.user_id) {
+        try {
+          await VisitorTrackingService.trackDashboard(user.user_id);
+          console.log('📱 Mobile dashboard visit tracked');
+        } catch (trackingError) {
+          console.log('📱 Mobile dashboard tracking error:', trackingError);
+        }
+      }
     } catch (error) {
       // Error loading dashboard data
       console.error('Error loading dashboard data:', error);

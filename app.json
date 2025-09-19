@@ -1,5 +1,6 @@
 {
   "expo": {
+    "sdkVersion": "54.0.0",
     "name": "CV Connect Mobile",
     "slug": "cv-connect-mobile",
     "version": "1.0.0",
@@ -33,7 +34,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "cv-connect-mobile-dev"
+        "projectId": "550e8400-e29b-41d4-a716-446655440000"
       },
       "environment": "development"
     }
