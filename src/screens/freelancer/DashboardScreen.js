@@ -11,10 +11,8 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 
-
 import socketService from '../../services/socketService';
 import VisitorTrackingService from '../../services/visitorTracking';
-import { useDispatch as useNotificationDispatch, useSelector as useNotificationSelector } from 'react-redux';
 import { addNotification, fetchNotifications, markNotificationAsRead } from '../../store/slices/notificationSlice';
 
 import { profileAPI } from '../../services/api';
@@ -58,10 +56,9 @@ const getActivityColor = (status) => {
 
 const DashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const notificationDispatch = useNotificationDispatch();
     const { user, token } = useSelector((state) => state.auth);
     const { dashboardData, profile, skills, isLoading } = useSelector((state) => state.freelancer);
-    const { notifications, unreadCount, isLoading: notificationsLoading } = useNotificationSelector((state) => state.notifications);
+    const { notifications, unreadCount, isLoading: notificationsLoading } = useSelector((state) => state.notifications);
     // Debug logging for component state
     console.log('🚀 DashboardScreen rendered');
     console.log('🚀 user:', user);
@@ -168,7 +165,7 @@ const DashboardScreen = ({ navigation }) => {
   const fetchNotificationData = async () => {
     try {
       console.log('📱 Fetching notifications...');
-      await notificationDispatch(fetchNotifications({ limit: 20 })).unwrap();
+      await dispatch(fetchNotifications({ limit: 20 })).unwrap();
       console.log('📱 Notifications fetched successfully');
     } catch (error) {
       console.error('❌ Failed to fetch notifications:', error);
@@ -179,7 +176,7 @@ const DashboardScreen = ({ navigation }) => {
     try {
       // Mark notification as read
       if (!notification.is_read) {
-        await notificationDispatch(markNotificationAsRead(notification.notification_id)).unwrap();
+        await dispatch(markNotificationAsRead(notification.notification_id)).unwrap();
       }
 
       // Navigate based on notification type
