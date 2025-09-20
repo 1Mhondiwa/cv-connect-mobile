@@ -74,6 +74,9 @@ const DashboardScreen = ({ navigation }) => {
   const [hiringStats, setHiringStats] = useState(null);
   const [hiringHistory, setHiringHistory] = useState([]);
   const [hiringLoading, setHiringLoading] = useState(false);
+  
+  // Local state for countdown timer
+  const [currentTime, setCurrentTime] = useState(new Date());
     
 
 
@@ -96,6 +99,15 @@ const DashboardScreen = ({ navigation }) => {
       // Note: WebSocket cleanup is handled by socketService
     };
   }, []); // Run only once on mount
+
+  // Real-time countdown timer for interviews
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Refresh dashboard data when screen comes into focus
   useEffect(() => {
@@ -187,6 +199,25 @@ const DashboardScreen = ({ navigation }) => {
     } catch (error) {
       console.error('❌ Failed to handle notification press:', error);
     }
+  };
+
+  // Calculate time remaining for interview countdown
+  const getTimeRemaining = (scheduledDate) => {
+    if (!scheduledDate) return null;
+    
+    const now = new Date();
+    const interviewDate = new Date(scheduledDate);
+    const timeDiff = interviewDate.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) return 'Interview time has passed';
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h ${minutes}m remaining`;
+    if (hours > 0) return `${hours}h ${minutes}m remaining`;
+    return `${minutes}m remaining`;
   };
 
   
@@ -409,6 +440,14 @@ const DashboardScreen = ({ navigation }) => {
                     ]}>
                       {notification.title}
                     </Text>
+                    <Text style={styles.notificationSubMessage}>
+                      {notification.message}
+                    </Text>
+                    {notification.notification_type.includes('interview') && notification.data?.scheduled_date && (
+                      <Text style={styles.countdownText}>
+                        {getTimeRemaining(notification.data.scheduled_date)}
+                      </Text>
+                    )}
                     <Text style={styles.notificationTime}>
                       {new Date(notification.created_at).toLocaleDateString()}
                     </Text>
@@ -991,6 +1030,21 @@ const styles = StyleSheet.create({
     fontSize: responsive.ifTablet(fontSize.md, fontSize.sm),
     color: '#333',
     marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+    fontWeight: '600',
+  },
+  notificationSubMessage: {
+    flex: 1,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#666',
+    marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+    fontStyle: 'italic',
+  },
+  countdownText: {
+    flex: 1,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#FF6B35',
+    marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+    fontWeight: '600',
   },
   unreadNotificationText: {
     fontWeight: '600',
