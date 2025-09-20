@@ -220,6 +220,46 @@ const DashboardScreen = ({ navigation }) => {
     return `${minutes}m remaining`;
   };
 
+  // Check if alert should be shown for interview
+  const shouldShowAlert = (scheduledDate) => {
+    if (!scheduledDate) return false;
+    
+    const now = new Date();
+    const interviewDate = new Date(scheduledDate);
+    const timeDiff = interviewDate.getTime() - now.getTime();
+    
+    // Convert to hours
+    const hoursUntilInterview = timeDiff / (1000 * 60 * 60);
+    
+    // Show alerts only when:
+    // - 24 hours or less (but more than 2 hours)
+    // - 2 hours or less (but more than 30 minutes)
+    // - 30 minutes or less
+    return hoursUntilInterview <= 24 && hoursUntilInterview > 0;
+  };
+
+  // Get alert message based on time remaining
+  const getAlertMessage = (scheduledDate) => {
+    if (!scheduledDate) return null;
+    
+    const now = new Date();
+    const interviewDate = new Date(scheduledDate);
+    const timeDiff = interviewDate.getTime() - now.getTime();
+    
+    const hoursUntilInterview = timeDiff / (1000 * 60 * 60);
+    const minutesUntilInterview = timeDiff / (1000 * 60);
+    
+    if (minutesUntilInterview <= 30) {
+      return '🚨 Interview starts in 30 minutes or less!';
+    } else if (hoursUntilInterview <= 2) {
+      return '⏰ Interview reminder: 2 hours or less remaining!';
+    } else if (hoursUntilInterview <= 24) {
+      return '📅 Interview reminder: Less than 24 hours to go!';
+    }
+    
+    return null;
+  };
+
   
 
   const loadDashboardData = async () => {
@@ -446,6 +486,16 @@ const DashboardScreen = ({ navigation }) => {
                     {notification.notification_type.includes('interview') && notification.data?.scheduled_date && (
                       <Text style={styles.countdownText}>
                         {getTimeRemaining(notification.data.scheduled_date)}
+                      </Text>
+                    )}
+                    {notification.notification_type === 'interview_reminder' && notification.data?.scheduled_date && (
+                      <Text style={styles.interviewDate}>
+                        Interview Date: {new Date(notification.data.scheduled_date).toLocaleDateString()} at {new Date(notification.data.scheduled_date).toLocaleTimeString()}
+                      </Text>
+                    )}
+                    {notification.notification_type === 'interview_reminder' && notification.data?.scheduled_date && shouldShowAlert(notification.data.scheduled_date) && (
+                      <Text style={styles.alertText}>
+                        {getAlertMessage(notification.data.scheduled_date)}
                       </Text>
                     )}
                     <Text style={styles.notificationTime}>
@@ -1045,6 +1095,25 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
     marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
     fontWeight: '600',
+  },
+  interviewDate: {
+    flex: 1,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#333',
+    marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+    fontWeight: '500',
+  },
+  alertText: {
+    flex: 1,
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    color: '#DC2626',
+    marginBottom: responsive.ifTablet(spacing.xs, scale(2)),
+    fontWeight: '700',
+    backgroundColor: '#FEF2F2',
+    padding: responsive.ifTablet(spacing.xs, scale(4)),
+    borderRadius: responsive.ifTablet(spacing.xs, scale(4)),
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   unreadNotificationText: {
     fontWeight: '600',
