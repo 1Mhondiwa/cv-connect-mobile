@@ -11,6 +11,7 @@ import CountryCodePicker from '../../components/CountryCodePicker';
 import CVViewer from '../../components/CVViewer';
 import { profileAPI } from '../../services/api';
 import { showToast } from '../../utils/toast';
+import config from '../../config/config';
 
 const ProfileScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -1068,7 +1069,7 @@ const ProfileScreen = ({ navigation }) => {
 
     try {
       console.log('Opening CV viewer for file:', profile.cv.stored_filename);
-      console.log('CV URL will be:', `http://10.254.121.136:5000/cv/${profile.cv.stored_filename}`);
+      console.log('CV URL will be:', `${config.API_BASE_URL.replace('/api', '')}/cv/${profile.cv.stored_filename}`);
       
       // Show the CV viewer modal
       setCvViewerVisible(true);
@@ -2231,39 +2232,13 @@ const ProfileScreen = ({ navigation }) => {
         </Card>
       )}
 
-      {/* Profile Options Section */}
-      {!isEditing && (
-        <Card style={styles.sectionCard} elevation={2}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Profile Options
-            </Text>
-            
-            <TouchableOpacity
-              style={styles.optionItem}
-              onPress={() => navigation.navigate('HiringHistory')}
-            >
-              <View style={styles.optionContent}>
-                <MaterialCommunityIcons name="history" size={24} color="#FF6B35" />
-                <View style={styles.optionText}>
-                  <Text style={styles.optionTitle}>Hiring History</Text>
-                  <Text style={styles.optionSubtitle}>View your hiring statistics and performance</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-              </View>
-            </TouchableOpacity>
-
-            {/* Removed NotificationSettings - using real-time dashboard notifications instead */}
-          </Card.Content>
-        </Card>
-      )}
 
             {/* CV Viewer Modal */}
       {cvViewerVisible && profile?.cv?.stored_filename && (
         <CVViewer
           visible={cvViewerVisible}
           onClose={() => setCvViewerVisible(false)}
-                      cvUrl={`http://10.254.121.136:5000/cv/${profile.cv.stored_filename}`}
+                      cvUrl={`${config.API_BASE_URL.replace('/api', '')}/cv/${profile.cv.stored_filename}`}
           cvFilename={profile?.cv?.original_filename || 'CV'}
           cvData={profile?.cv}
         />

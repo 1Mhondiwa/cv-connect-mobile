@@ -18,7 +18,7 @@ class SocketService {
         return;
       }
 
-      this.socket = io('http://10.0.0.15:5000', {
+      this.socket = io('http://10.0.0.10:5000', {
         auth: {
           token: token
         },

@@ -30,7 +30,8 @@
           "color": "#FF6B35",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "extra": {
       "eas": {

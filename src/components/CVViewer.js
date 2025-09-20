@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import config from '../config/config';
 
 // Conditional import to prevent runtime errors
 let Pdf = null;
@@ -69,74 +70,32 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
       setUrlStatus('checking');
       console.log('Checking URL validity:', cvUrl);
       
-      // Test the URL with a HEAD request
-      const response = await fetch(cvUrl, { 
-        method: 'HEAD',
-        timeout: 10000 
-      });
+      // Set the URL as valid immediately and skip validation
+      // This prevents the mobile app from getting stuck on network requests
+      console.log('Skipping URL validation for mobile app compatibility');
+      setValidUrl(cvUrl);
+      setUrlStatus('valid');
       
-      if (response.ok) {
-        console.log('URL is valid, status:', response.status);
-        setValidUrl(cvUrl);
-        setUrlStatus('valid');
-      } else {
-        console.log('Initial URL returned status:', response.status, 'trying alternatives...');
-        
-        // Try to construct alternative URLs
-        await tryAlternativeUrls();
-      }
     } catch (error) {
-      console.log('Error checking initial URL, trying alternatives...');
-      
-      // Try to construct alternative URLs
-      await tryAlternativeUrls();
+      console.log('Error in URL validation:', error);
+      setUrlStatus('invalid');
     }
   };
 
-  const tryAlternativeUrls = async () => {
-    console.log('Trying alternative URL constructions...');
-    
-    // Extract the filename from the stored_filename
-    const storedFilename = cvUrl.split('/').pop();
-    console.log('Stored filename from URL:', storedFilename);
-    
-    // Try different URL patterns
-    const alternativeUrls = [
-      `http://10.254.121.136:5000/uploads/cvs/${storedFilename}`,
-      `http://10.254.121.136:5000/cv/${storedFilename}`,
-    ];
-    
-    for (const altUrl of alternativeUrls) {
-      try {
-        console.log('Testing alternative URL:', altUrl);
-        const response = await fetch(altUrl, { method: 'HEAD', timeout: 5000 });
-        
-        if (response.ok) {
-          console.log('Alternative URL works:', altUrl);
-          setValidUrl(altUrl);
-          setUrlStatus('valid');
-          return;
-        }
-      } catch (error) {
-        console.log('Alternative URL failed:', altUrl, error.message);
-      }
-    }
-    
-    console.error('All alternative URLs failed');
-    setUrlStatus('invalid');
-  };
 
   const handleViewCV = async () => {
-    if (!validUrl) {
-      Alert.alert('View Error', 'CV URL is not accessible. Please try again.');
+    const urlToUse = validUrl || cvUrl;
+    
+    if (!urlToUse) {
+      Alert.alert('View Error', 'CV URL is not available. Please try again.');
       return;
     }
 
     try {
-      console.log('Attempting to view CV at URL:', validUrl);
+      console.log('Attempting to view CV at URL:', urlToUse);
       
       // Validate URL format
-      if (!validUrl || !validUrl.startsWith('http')) {
+      if (!urlToUse || !urlToUse.startsWith('http')) {
         Alert.alert('Invalid URL', 'CV URL is not properly formatted. Please try again.');
         return;
       }
@@ -144,26 +103,31 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
       // For PDFs, show in-app viewer if available, otherwise open in browser
       if (cleanCvFilename.toLowerCase().endsWith('.pdf')) {
         if (Pdf) {
+          console.log('Opening PDF in-app viewer');
           setShowPdfViewer(true);
         } else {
+          console.log('PDF viewer not available, opening in browser');
           // Fallback to browser if PDF viewer not available
           try {
-            await Linking.openURL(validUrl);
+            await Linking.openURL(urlToUse);
           } catch (linkError) {
+            console.error('Error opening PDF in browser:', linkError);
             Alert.alert(
               'Cannot Open PDF', 
-              'PDF viewer not available. Please try opening in browser.'
+              'Unable to open PDF. Please check your network connection and try again.'
             );
           }
         }
       } else {
+        console.log('Opening non-PDF file in browser');
         // For other file types, try to open in browser
         try {
-          await Linking.openURL(validUrl);
+          await Linking.openURL(urlToUse);
         } catch (linkError) {
+          console.error('Error opening file in browser:', linkError);
           Alert.alert(
             'Cannot Open File', 
-            'Unable to open this file type. Please try again later.'
+            'Unable to open this file type. Please check your network connection and try again.'
           );
         }
       }
@@ -171,7 +135,7 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
       console.error('Error opening CV:', error);
       Alert.alert(
         'Error Opening CV', 
-        'Cannot open CV file. This might be due to:\n\n• Invalid file path\n• Server configuration\n• Network issues\n\nPlease try again later.'
+        'Cannot open CV file. Please check your network connection and try again.'
       );
     }
   };
@@ -267,7 +231,7 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
           <View style={styles.pdfContent}>
             {Pdf ? (
               <Pdf
-                source={{ uri: validUrl }}
+                source={{ uri: validUrl || cvUrl }}
                 style={styles.pdf}
                 onLoadComplete={(numberOfPages, filePath) => {
                   console.log(`PDF loaded: ${numberOfPages} pages`);
@@ -293,7 +257,7 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
                 </Text>
                 <TouchableOpacity 
                   style={styles.browserButton}
-                  onPress={() => Linking.openURL(validUrl)}
+                  onPress={() => Linking.openURL(validUrl || cvUrl)}
                 >
                   <Text style={styles.browserButtonText}>Open in Browser</Text>
                 </TouchableOpacity>
