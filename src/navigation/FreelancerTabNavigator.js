@@ -18,7 +18,7 @@ import ProfileScreen from '../screens/freelancer/ProfileScreen';
 import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
 import InterviewDashboardScreen from '../screens/freelancer/InterviewDashboardScreen';
 import InterviewFeedbackScreen from '../screens/freelancer/InterviewFeedbackScreen';
-import NotificationSettingsScreen from '../screens/freelancer/NotificationSettingsScreen';
+// Removed NotificationSettingsScreen - using real-time dashboard notifications instead
 import VideoCallScreen from '../screens/freelancer/VideoCallScreen';
 
 import MessagesScreen from '../screens/freelancer/MessagesScreen';
@@ -138,13 +138,7 @@ const ProfileStack = () => {
           title: 'Hiring History',
         }}
       />
-      <Stack.Screen 
-        name="NotificationSettings" 
-        component={NotificationSettingsScreen}
-        options={{
-          title: 'Notification Settings',
-        }}
-      />
+      {/* Removed NotificationSettings screen - using real-time dashboard notifications instead */}
     </Stack.Navigator>
   );
 };

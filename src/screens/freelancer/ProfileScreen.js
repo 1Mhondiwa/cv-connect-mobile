@@ -2253,19 +2253,7 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.optionItem}
-              onPress={() => navigation.navigate('NotificationSettings')}
-            >
-              <View style={styles.optionContent}>
-                <MaterialCommunityIcons name="bell" size={24} color="#FF6B35" />
-                <View style={styles.optionText}>
-                  <Text style={styles.optionTitle}>Notification Settings</Text>
-                  <Text style={styles.optionSubtitle}>Manage your notification preferences</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-              </View>
-            </TouchableOpacity>
+            {/* Removed NotificationSettings - using real-time dashboard notifications instead */}
           </Card.Content>
         </Card>
       )}
