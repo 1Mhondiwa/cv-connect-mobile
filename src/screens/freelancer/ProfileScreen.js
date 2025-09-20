@@ -1982,8 +1982,19 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.profileImageWrapper}>
                   <Avatar.Image
                     size={100}
-                    source={{ uri: `http://192.168.101.104:5000${profile.profile_picture_url}` }}
+                    source={{ 
+                      uri: `${config.API_BASE_URL.replace('/api', '')}${profile.profile_picture_url}`,
+                      cache: 'force-cache'
+                    }}
                     style={styles.profileImage}
+                    onError={(error) => {
+                      console.error('Profile image load error:', error);
+                      console.error('Profile image URL:', `${config.API_BASE_URL.replace('/api', '')}${profile.profile_picture_url}`);
+                    }}
+                    onLoad={() => {
+                      console.log('Profile image loaded successfully');
+                      console.log('Profile image URL:', `${config.API_BASE_URL.replace('/api', '')}${profile.profile_picture_url}`);
+                    }}
                   />
                 </View>
               ) : (
@@ -2030,8 +2041,8 @@ const ProfileScreen = ({ navigation }) => {
             >
               <MaterialCommunityIcons
                 name={isEditing ? "close" : "pencil"}
-                size={20}
-                color={isEditing ? "#EF4444" : "#FF6B35"}
+                size={24}
+                color={isEditing ? "#FFFFFF" : "#FFFFFF"}
               />
               <Text style={styles.editButtonText}>
                 {isEditing ? "Cancel" : "Edit"}
@@ -2300,18 +2311,23 @@ const styles = StyleSheet.create({
   editButtonTouchable: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
     backgroundColor: '#FF6B35',
     borderWidth: 1,
     borderColor: '#FF6B35',
-    gap: 4,
+    gap: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   editButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   welcomeText: {
     fontWeight: 'bold',
