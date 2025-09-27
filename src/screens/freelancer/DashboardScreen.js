@@ -404,6 +404,7 @@ const DashboardScreen = ({ navigation }) => {
   console.log('📊 Building stats array...');
   console.log('📊 profile?.skills?.length:', profile?.skills?.length);
   console.log('📊 profile?.cv_skills?.length:', profile?.cv_skills?.length);
+  console.log('📊 profile?.completed_jobs?.length:', profile?.completed_jobs?.length);
   
   const stats = [
     { 
@@ -413,6 +414,16 @@ const DashboardScreen = ({ navigation }) => {
       icon: 'star'
     }
   ];
+
+  // Add Jobs Completed stat if freelancer has completed jobs
+  if (profile?.completed_jobs && profile.completed_jobs.length > 0) {
+    stats.push({
+      title: 'Jobs Completed',
+      value: profile.completed_jobs.length.toString(),
+      color: '#059652', // Green color matching web
+      icon: 'briefcase'
+    });
+  }
   
   console.log('📊 Final stats array:', stats);
 
