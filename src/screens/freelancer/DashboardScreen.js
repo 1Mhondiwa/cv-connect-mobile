@@ -109,12 +109,24 @@ const DashboardScreen = ({ navigation }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Periodic profile refresh for real-time updates (every 5 minutes)
+  useEffect(() => {
+    const profileRefreshTimer = setInterval(() => {
+      console.log('🔄 Periodic profile refresh for real-time updates...');
+      dispatch(getProfile());
+    }, 300000); // 5 minutes
+
+    return () => clearInterval(profileRefreshTimer);
+  }, [dispatch]);
+
   // Refresh dashboard data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadDashboardData();
       fetchActivity();
       fetchHiringData();
+      // Refresh profile data to get latest completed jobs
+      dispatch(getProfile());
     });
 
     return unsubscribe;
@@ -596,7 +608,19 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        <Text style={styles.sectionTitle}>Your Stats</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Stats</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={() => {
+              console.log('🔄 Manual profile refresh for stats...');
+              dispatch(getProfile());
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="refresh" size={16} color="#8B4513" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.statsGrid}>
           {stats.map((stat, index) => (
             <Card key={index} style={[styles.statCard, { borderLeftColor: stat.color }]} elevation={2}>
