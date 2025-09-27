@@ -600,6 +600,20 @@ const DashboardScreen = ({ navigation }) => {
               />
               <Text style={styles.hiringHistoryButtonText}>View Hiring History</Text>
             </TouchableOpacity>
+
+            {/* Contracts Button */}
+            <TouchableOpacity
+              style={styles.hiringHistoryButton}
+              onPress={() => navigation.navigate('Contracts')}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons 
+                name="file-document-multiple" 
+                size={20} 
+                color="#FF6B35" 
+              />
+              <Text style={styles.hiringHistoryButtonText}>My Contracts</Text>
+            </TouchableOpacity>
           </Card.Content>
         </Card>
       </View>

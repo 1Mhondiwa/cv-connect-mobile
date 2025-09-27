@@ -185,6 +185,11 @@ export const profileAPI = {
   getActivity: () => api.get('/freelancer/activity'),
   getHiringStats: () => api.get('/freelancer/hiring/stats'),
   getHiringHistory: () => api.get('/freelancer/hiring/history'),
+  uploadSignedContract: (hireId, formData) => api.post(`/freelancer/contract/${hireId}/upload-signed`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 };
 
 // Search API
