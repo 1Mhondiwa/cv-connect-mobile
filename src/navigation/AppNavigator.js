@@ -20,6 +20,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import HiringHistoryScreen from '../screens/freelancer/HiringHistoryScreen';
+import ContractsScreen from '../screens/freelancer/ContractsScreen';
 import AdminCreateScreen from '../screens/auth/AdminCreateScreen';
 import AssociateRequestScreen from '../screens/associate/AssociateRequestScreen';
 
@@ -187,6 +188,7 @@ const AppNavigator = () => {
         <>
           <Stack.Screen name="Main" component={FreelancerTabNavigator} />
           <Stack.Screen name="HiringHistory" component={HiringHistoryScreen} />
+          <Stack.Screen name="Contracts" component={ContractsScreen} />
         </>
       )}
       {screenToShow === 'Admin' && (

@@ -241,6 +241,12 @@ const FreelancerTabNavigator = () => {
           title: 'Profile',
           headerShown: false, // Hide header since ProfileStack has its own
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Reset the ProfileStack to show ProfileMain when Profile tab is pressed
+            navigation.navigate('Profile', { screen: 'ProfileMain' });
+          },
+        })}
       />
     </Tab.Navigator>
   );

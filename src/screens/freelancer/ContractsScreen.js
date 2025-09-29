@@ -18,6 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
 import { profileAPI } from '../../services/api';
+import config from '../../config/config';
 
 // Import responsive utilities
 import { 
@@ -112,25 +113,30 @@ const ContractsScreen = ({ navigation }) => {
     try {
       console.log('📄 Downloading contract:', contractPath);
       
-      // Construct full URL
+      // Construct full URL using config API_BASE_URL (remove /api suffix for file downloads)
+      const baseUrl = config.API_BASE_URL.replace('/api', '');
       const fullUrl = contractPath.startsWith('http') 
         ? contractPath 
-        : `http://localhost:5000${contractPath}`;
+        : `${baseUrl}${contractPath}`;
       
       console.log('📄 Full contract URL:', fullUrl);
       
       // Check if we can open the URL
       const canOpen = await Linking.canOpenURL(fullUrl);
+      console.log('📄 Can open URL:', canOpen);
       
       if (canOpen) {
+        console.log('📄 Opening contract URL...');
         await Linking.openURL(fullUrl);
         console.log('✅ Contract opened successfully');
       } else {
-        Alert.alert('Error', 'Cannot open contract file. Please try again.');
+        console.log('❌ Cannot open URL:', fullUrl);
+        Alert.alert('Error', `Cannot open contract file. URL: ${fullUrl}`);
       }
     } catch (error) {
       console.error('❌ Error opening contract:', error);
-      Alert.alert('Error', 'Failed to open contract. Please try again.');
+      console.error('❌ Error details:', error.message);
+      Alert.alert('Error', `Failed to open contract: ${error.message}`);
     }
   };
 
@@ -167,7 +173,7 @@ const ContractsScreen = ({ navigation }) => {
         uri: file.uri,
         type: file.mimeType,
         name: file.name,
-      } as any);
+      });
 
       console.log('📤 Uploading signed contract...');
       
@@ -294,16 +300,16 @@ const ContractsScreen = ({ navigation }) => {
         <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}
           >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#FF6B35" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Contracts</Text>
           <TouchableOpacity
             style={styles.refreshHeaderButton}
             onPress={fetchContracts}
           >
-            <MaterialCommunityIcons name="refresh" size={20} color="#FF6B35" />
+            <MaterialCommunityIcons name="refresh" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSubtitle}>
