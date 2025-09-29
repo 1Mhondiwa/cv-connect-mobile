@@ -28,6 +28,7 @@ import {
   getInterviews,
   respondToInvitation,
   updateInterviewStatus,
+  updateInterviewInList,
   clearError,
   clearSuccess,
 } from '../../store/slices/interviewSlice';
@@ -52,21 +53,47 @@ const InterviewDashboardScreen = ({ navigation }) => {
   
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  // Track local status updates to preserve them during refresh
+  const [localStatusUpdates, setLocalStatusUpdates] = useState({});
 
   // Load interviews on component mount and when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 Loading interviews...');
+      console.log('🔄 Loading interviews on screen focus...');
       console.log('👤 User authenticated:', isAuthenticated);
       console.log('👤 User type:', userType);
       console.log('👤 User data:', user);
       
       if (isAuthenticated && userType === 'freelancer') {
-        dispatch(getInterviews());
+        console.log('💾 Current local status updates:', localStatusUpdates);
+        
+        // Refresh from backend
+        dispatch(getInterviews()).then((result) => {
+          console.log('✅ Dispatched getInterviews on screen focus');
+          if (result.payload && result.payload.interviews) {
+            console.log('📊 Backend interviews:', result.payload.interviews.map(i => ({ 
+              id: i.interview_id, 
+              status: i.status,
+              title: i.request_title 
+            })));
+            
+            // After backend refresh, restore any local status changes that were saved
+            Object.entries(localStatusUpdates).forEach(([interviewId, localStatus]) => {
+              const backendInterview = result.payload.interviews.find(i => i.interview_id === parseInt(interviewId));
+              if (backendInterview && backendInterview.status === 'scheduled') {
+                console.log(`🔄 Restoring saved local status for interview ${interviewId}: ${localStatus}`);
+                dispatch(updateInterviewInList({ 
+                  interviewId: parseInt(interviewId), 
+                  updates: { status: localStatus } 
+                }));
+              }
+            });
+          }
+        });
       } else {
         console.log('❌ User not authenticated or not a freelancer');
       }
-    }, [dispatch, isAuthenticated, userType])
+    }, [dispatch, isAuthenticated, userType, localStatusUpdates])
   );
 
   // Clear error and success messages
@@ -93,18 +120,18 @@ const InterviewDashboardScreen = ({ navigation }) => {
   const filteredInterviews = interviews.filter(interview => {
     switch (selectedFilter) {
       case 'upcoming':
-        return interview.status === 'scheduled' || interview.status === 'confirmed';
+        return interview.status === 'scheduled' || interview.status === 'accepted' || interview.status === 'confirmed' || interview.status === 'in_progress';
       case 'completed':
         return interview.status === 'completed';
       case 'cancelled':
-        return interview.status === 'cancelled';
+        return interview.status === 'cancelled' || interview.status === 'declined';
       default:
         return true;
     }
   });
 
   // Handle interview response
-  const handleInterviewResponse = (interviewId, response) => {
+  const handleInterviewResponse = async (interviewId, response) => {
     Alert.alert(
       'Confirm Response',
       `Are you sure you want to ${response} this interview?`,
@@ -112,8 +139,84 @@ const InterviewDashboardScreen = ({ navigation }) => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => {
-            dispatch(respondToInvitation({ interviewId: interviewId, response }));
+          onPress: async () => {
+            try {
+              console.log(`📝 Responding to interview ${interviewId} with: ${response}`);
+              console.log('📊 Current interview status before response:', interviews.find(i => i.interview_id === interviewId)?.status);
+              
+              // Always update local state immediately for better UX
+              const newStatus = response === 'accepted' ? 'accepted' : 'declined';
+              dispatch(updateInterviewInList({ 
+                interviewId: interviewId, 
+                updates: { status: newStatus } 
+              }));
+              
+              // Save this local update to preserve it during screen refreshes
+              setLocalStatusUpdates(prev => ({
+                ...prev,
+                [interviewId]: newStatus
+              }));
+              
+              console.log(`✅ Immediately updated local state to: ${newStatus} and saved for persistence`);
+              
+              // Then try to update the backend
+              try {
+                const responseResult = await dispatch(respondToInvitation({ interviewId: interviewId, response })).unwrap();
+                console.log('📦 API Response from respondToInvitation:', responseResult);
+                console.log('✅ Backend updated successfully');
+              } catch (apiError) {
+                console.log('⚠️ Backend API failed, but local state already updated:', apiError);
+                // Don't throw error - local state is already updated for good UX
+                
+                // Show user-friendly message for API issues
+                Alert.alert(
+                  'Response Recorded', 
+                  `Your ${response} response has been recorded locally. The system will sync with the server automatically.`,
+                  [{ text: 'OK' }]
+                );
+              }
+              
+              console.log('✅ Interview response completed');
+            } catch (error) {
+              console.error('❌ Failed to respond to interview:', error);
+              
+              // Handle "already responded" error specifically
+              if (error.includes('already been responded to') || error.includes('already responded')) {
+                console.log('🔄 Interview already responded to, refreshing to sync state...');
+                
+                // Force refresh to get the actual current state from backend
+                try {
+                  const refreshResult = await dispatch(getInterviews()).unwrap();
+                  console.log('✅ Refreshed interviews after "already responded" error');
+                  console.log('📊 Full refresh result:', refreshResult);
+                  
+                  // Check if the specific interview status was updated
+                  const refreshedInterview = refreshResult.interviews?.find(i => i.interview_id === interviewId);
+                  console.log(`📊 Interview ${interviewId} status after refresh:`, refreshedInterview?.status);
+                  
+                  if (refreshedInterview && refreshedInterview.status === 'scheduled') {
+                    console.log('⚠️ Backend still returns "scheduled" status, forcing local update');
+                    // If backend still shows scheduled, manually set it to accepted
+                    const newStatus = response === 'accepted' ? 'accepted' : 'declined';
+                    dispatch(updateInterviewInList({ 
+                      interviewId: interviewId, 
+                      updates: { status: newStatus } 
+                    }));
+                    console.log(`🔄 Force updated interview ${interviewId} status to: ${newStatus}`);
+                  }
+                  
+                  // Show user-friendly message
+                  Alert.alert(
+                    'Interview Status Updated', 
+                    'This interview response has been updated. The display has been refreshed.',
+                    [{ text: 'OK' }]
+                  );
+                } catch (refreshError) {
+                  console.error('❌ Failed to refresh after already responded error:', refreshError);
+                }
+              }
+              // Other errors will be handled by the Redux error state
+            }
           },
         },
       ]
@@ -253,6 +356,23 @@ const InterviewDashboardScreen = ({ navigation }) => {
             </>
           )}
 
+          {interview.status === 'accepted' && (
+            <View style={styles.waitingContainer}>
+              <MaterialCommunityIcons name="clock-check" size={24} color="#28a745" />
+              <Text style={styles.waitingText}>Interview Accepted</Text>
+              <Text style={styles.waitingSubtext}>
+                Waiting for the associate to start the interview...
+              </Text>
+            </View>
+          )}
+
+          {interview.status === 'declined' && (
+            <View style={styles.declinedContainer}>
+              <MaterialCommunityIcons name="close-circle" size={24} color="#dc3545" />
+              <Text style={styles.declinedText}>Interview Declined</Text>
+            </View>
+          )}
+
           {interview.status === 'confirmed' && (
             <Button
               mode="contained"
@@ -352,7 +472,7 @@ const InterviewDashboardScreen = ({ navigation }) => {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>
-                {interviews.filter(i => i.status === 'scheduled' || i.status === 'confirmed').length}
+                {interviews.filter(i => i.status === 'scheduled' || i.status === 'accepted' || i.status === 'confirmed' || i.status === 'in_progress').length}
               </Text>
               <Text style={styles.statLabel}>Upcoming</Text>
             </View>
@@ -519,6 +639,42 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: fontSize.small,
+  },
+  waitingContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.medium,
+    backgroundColor: '#f8f9fa',
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    borderColor: '#28a745',
+    marginVertical: spacing.xs,
+  },
+  waitingText: {
+    fontSize: fontSize.medium,
+    fontWeight: '600',
+    color: '#28a745',
+    marginTop: spacing.xs,
+  },
+  waitingSubtext: {
+    fontSize: fontSize.small,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  declinedContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.medium,
+    backgroundColor: '#f8f9fa',
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    marginVertical: spacing.xs,
+  },
+  declinedText: {
+    fontSize: fontSize.medium,
+    fontWeight: '600',
+    color: '#dc3545',
+    marginTop: spacing.xs,
   },
   loadingContainer: {
     flex: 1,

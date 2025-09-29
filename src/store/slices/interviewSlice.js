@@ -34,9 +34,13 @@ export const respondToInvitation = createAsyncThunk(
   'interview/respondToInvitation',
   async ({ interviewId, response }, { rejectWithValue }) => {
     try {
+      console.log(`🌐 API Call: respondToInvitation(${interviewId}, ${response})`);
       const apiResponse = await interviewAPI.respondToInvitation(interviewId, response);
+      console.log('🌐 Raw API Response:', apiResponse);
+      console.log('🌐 API Response Data:', apiResponse.data);
       return apiResponse.data;
     } catch (error) {
+      console.error('🌐 API Error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to respond to invitation');
     }
   }
@@ -199,13 +203,39 @@ const interviewSlice = createSlice({
       .addCase(respondToInvitation.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = 'Response submitted successfully';
+        
+        console.log('🔄 Processing respondToInvitation response:', action.payload);
+        
         // Update the interview in the list
-        const { interviewId, updates } = action.payload;
-        const index = state.interviews.findIndex(interview => interview.interview_id === interviewId);
-        if (index !== -1) {
-          state.interviews[index] = { ...state.interviews[index], ...updates };
-          
-          // Notifications are now handled by real-time dashboard notifications via WebSocket
+        const responseData = action.payload;
+        
+        // Handle different response formats from backend
+        let interviewId, updates;
+        
+        if (responseData.interviewId && responseData.updates) {
+          // Expected format: { interviewId, updates }
+          interviewId = responseData.interviewId;
+          updates = responseData.updates;
+        } else if (responseData.interview_id) {
+          // Alternative format: interview object with interview_id
+          interviewId = responseData.interview_id;
+          updates = responseData;
+        } else if (responseData.data && responseData.data.interview_id) {
+          // Nested format: { data: { interview_id, ... } }
+          interviewId = responseData.data.interview_id;
+          updates = responseData.data;
+        }
+        
+        if (interviewId) {
+          const index = state.interviews.findIndex(interview => interview.interview_id === interviewId);
+          if (index !== -1) {
+            console.log(`✅ Updating interview ${interviewId} at index ${index} with:`, updates);
+            state.interviews[index] = { ...state.interviews[index], ...updates };
+          } else {
+            console.log(`❌ Interview ${interviewId} not found in interviews list`);
+          }
+        } else {
+          console.log('❌ No interviewId found in response, cannot update local state');
         }
       })
       .addCase(respondToInvitation.rejected, (state, action) => {

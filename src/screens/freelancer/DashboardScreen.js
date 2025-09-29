@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 
 import socketService from '../../services/socketService';
 import VisitorTrackingService from '../../services/visitorTracking';
@@ -119,14 +120,35 @@ const DashboardScreen = ({ navigation }) => {
     return () => clearInterval(profileRefreshTimer);
   }, [dispatch]);
 
+  // Periodic notifications refresh for real-time updates (every 60 seconds)
+  useEffect(() => {
+    const notificationsRefreshTimer = setInterval(() => {
+      console.log('🔔 Periodic notifications refresh for real-time updates...');
+      fetchNotificationData();
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(notificationsRefreshTimer);
+  }, []);
+
+  // Refresh notifications when screen is focused (similar to interviews screen)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('📱 Dashboard screen focused - refreshing notifications...');
+      fetchNotificationData();
+    }, [])
+  );
+
   // Refresh dashboard data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
+      console.log('📱 Dashboard screen focused - refreshing all data...');
       loadDashboardData();
       fetchActivity();
       fetchHiringData();
       // Refresh profile data to get latest completed jobs
       dispatch(getProfile());
+      // Refresh notifications to get latest interview notifications
+      fetchNotificationData();
     });
 
     return unsubscribe;
@@ -175,11 +197,17 @@ const DashboardScreen = ({ navigation }) => {
 
     // Register notification handler for interview notifications
     const notificationHandlerId = socketService.onNotification((notificationData) => {
-      console.log('📱 Interview notification received:', notificationData);
+      console.log('📱 Real-time notification received:', notificationData);
       
       if (notificationData.type === 'interview_notification') {
-        notificationDispatch(addNotification(notificationData.notification));
+        // Add the new notification to Redux store
+        dispatch(addNotification(notificationData.notification));
+        console.log('✅ Added new notification to Redux store');
       }
+      
+      // Refresh notifications to get the latest from backend
+      fetchNotificationData();
+      console.log('🔄 Refreshed notifications after real-time update');
     });
 
     // Store handler IDs for cleanup (you might want to store these in component state)
@@ -203,11 +231,9 @@ const DashboardScreen = ({ navigation }) => {
         await dispatch(markNotificationAsRead(notification.notification_id)).unwrap();
       }
 
-      // Navigate based on notification type
-      if (notification.notification_type.includes('interview')) {
-        // Navigate to interviews screen or show interview details
-        navigation.navigate('Interviews');
-      }
+      // Navigate to the dedicated notifications screen to show all notifications
+      console.log('📱 Navigating to Notifications screen from dashboard notification');
+      navigation.navigate('Notifications');
     } catch (error) {
       console.error('❌ Failed to handle notification press:', error);
     }
@@ -477,61 +503,98 @@ const DashboardScreen = ({ navigation }) => {
       </Surface>
 
       {/* Interview Notifications Section */}
-      {unreadCount > 0 && (
-        <View style={styles.notificationContainer}>
-          <Card style={styles.notificationCard} elevation={3}>
-            <Card.Content style={styles.notificationContent}>
-              <View style={styles.notificationHeader}>
-                <MaterialCommunityIcons name="bell" size={24} color="#FF6B35" />
-                <Text style={styles.notificationTitle}>
-                  Interview Notifications ({unreadCount})
-                </Text>
-              </View>
-              {notifications.slice(0, 3).map((notification, index) => (
-                <TouchableOpacity
-                  key={notification.notification_id}
-                  style={[
-                    styles.notificationItem,
-                    !notification.is_read && styles.unreadNotification
-                  ]}
-                  onPress={() => handleNotificationPress(notification)}
-                >
-                  <View style={styles.notificationContent}>
-                    <Text style={[
-                      styles.notificationMessage,
-                      !notification.is_read && styles.unreadNotificationText
-                    ]}>
-                      {notification.title}
-                    </Text>
-                    <Text style={styles.notificationSubMessage}>
-                      {notification.message}
-                    </Text>
-                    {notification.notification_type.includes('interview') && notification.data?.scheduled_date && (
-                      <Text style={styles.countdownText}>
-                        {getTimeRemaining(notification.data.scheduled_date)}
+      {(() => {
+        // Filter for dashboard display - hide past interviews but keep recent notifications
+        const now = new Date();
+        const dashboardNotifications = notifications.filter(notification => {
+          // Keep unread notifications
+          if (!notification.is_read) return true;
+          
+          // For interview notifications, filter out past ones ON DASHBOARD ONLY
+          if (notification.notification_type.includes('interview') && notification.data?.scheduled_date) {
+            const interviewDate = new Date(notification.data.scheduled_date);
+            return interviewDate >= now; // Only keep upcoming interviews on dashboard
+          }
+          
+          // Keep other types if they're recent (within last 7 days)
+          const notificationDate = new Date(notification.created_at);
+          const daysDiff = (now - notificationDate) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 7;
+        });
+        
+        // Sort by urgency: unread first, then by scheduled date for interviews
+        const sortedNotifications = dashboardNotifications.sort((a, b) => {
+          // Unread notifications first
+          if (!a.is_read && b.is_read) return -1;
+          if (a.is_read && !b.is_read) return 1;
+          
+          // For interview notifications, sort by scheduled date (earliest first)
+          if (a.data?.scheduled_date && b.data?.scheduled_date) {
+            return new Date(a.data.scheduled_date) - new Date(b.data.scheduled_date);
+          }
+          
+          // Fall back to creation date
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+        
+        // Get top 2 most urgent notifications for dashboard
+        const urgentNotifications = sortedNotifications.slice(0, 2);
+        
+        return urgentNotifications.length > 0 && (
+          <View style={styles.notificationContainer}>
+            <Card style={styles.notificationCard} elevation={3}>
+              <Card.Content style={styles.notificationContent}>
+                <View style={styles.notificationHeader}>
+                  <MaterialCommunityIcons name="bell" size={24} color="#FF6B35" />
+                  <Text style={styles.notificationTitle}>
+                    Urgent Notifications ({urgentNotifications.length})
+                  </Text>
+                  {notifications.length > 2 && (
+                    <TouchableOpacity 
+                      style={styles.viewAllButton}
+                      onPress={() => navigation.navigate('Notifications')}
+                    >
+                      <Text style={styles.viewAllText}>View All ({notifications.length})</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {urgentNotifications.map((notification, index) => (
+                  <TouchableOpacity
+                    key={notification.notification_id}
+                    style={[
+                      styles.notificationItem,
+                      styles.compactNotificationItem,
+                      !notification.is_read && styles.unreadNotification
+                    ]}
+                    onPress={() => handleNotificationPress(notification)}
+                  >
+                    <View style={styles.notificationContent}>
+                      <Text style={[
+                        styles.notificationMessage,
+                        styles.compactNotificationMessage,
+                        !notification.is_read && styles.unreadNotificationText
+                      ]}>
+                        {notification.title}
                       </Text>
-                    )}
-                    {notification.notification_type === 'interview_reminder' && notification.data?.scheduled_date && (
-                      <Text style={styles.interviewDate}>
-                        Interview Date: {new Date(notification.data.scheduled_date).toLocaleDateString()} at {new Date(notification.data.scheduled_date).toLocaleTimeString()}
-                      </Text>
-                    )}
-                    {notification.notification_type === 'interview_reminder' && notification.data?.scheduled_date && shouldShowAlert(notification.data.scheduled_date) && (
-                      <Text style={styles.alertText}>
-                        {getAlertMessage(notification.data.scheduled_date)}
-                      </Text>
-                    )}
-                    <Text style={styles.notificationTime}>
-                      {new Date(notification.created_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  {!notification.is_read && <View style={styles.unreadDot} />}
-                </TouchableOpacity>
-              ))}
-            </Card.Content>
-          </Card>
-        </View>
-      )}
+                      {notification.notification_type.includes('interview') && notification.data?.scheduled_date && (
+                        <Text style={styles.compactCountdownText}>
+                          {getTimeRemaining(notification.data.scheduled_date)}
+                        </Text>
+                      )}
+                      {notification.notification_type === 'interview_reminder' && notification.data?.scheduled_date && shouldShowAlert(notification.data.scheduled_date) && (
+                        <Text style={styles.compactAlertText}>
+                          {getAlertMessage(notification.data.scheduled_date)}
+                        </Text>
+                      )}
+                    </View>
+                    {!notification.is_read && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                ))}
+              </Card.Content>
+            </Card>
+          </View>
+        );
+      })()}
 
       {/* Availability Status Toggle - Prominent and Easy Access */}
       <View style={styles.availabilityContainer}>
@@ -586,6 +649,26 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.availabilityNote}>
               Tap the button above to quickly change your availability status
             </Text>
+          </Card.Content>
+        </Card>
+      </View>
+
+      {/* Quick Actions Card */}
+      <View style={styles.availabilityContainer}>
+        <Card style={styles.availabilityCard} elevation={3}>
+          <Card.Content style={styles.availabilityContent}>
+            <View style={styles.availabilityHeader}>
+              <MaterialCommunityIcons 
+                name="compass-outline" 
+                size={24} 
+                color="#FF6B35" 
+              />
+              <Text style={styles.availabilityTitle}>Quick Actions</Text>
+            </View>
+            
+            <Text style={styles.availabilityNote}>
+              Access your hiring history and contract documents
+            </Text>
             
             {/* Hiring History Button */}
             <TouchableOpacity
@@ -617,8 +700,6 @@ const DashboardScreen = ({ navigation }) => {
           </Card.Content>
         </Card>
       </View>
-
-
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -1104,6 +1185,7 @@ const styles = StyleSheet.create({
   notificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: responsive.ifTablet(spacing.sm, spacing.sm),
   },
   notificationTitle: {
@@ -1111,6 +1193,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FF6B35',
     marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
+    flex: 1,
+  },
+  viewAllButton: {
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: responsive.ifTablet(spacing.sm, spacing.xs),
+    paddingVertical: responsive.ifTablet(spacing.xs, scale(2)),
+    borderRadius: responsive.ifTablet(spacing.sm, scale(4)),
+  },
+  viewAllText: {
+    color: '#FFFFFF',
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    fontWeight: '600',
   },
   notificationItem: {
     flexDirection: 'row',
@@ -1178,6 +1272,31 @@ const styles = StyleSheet.create({
     borderRadius: responsive.ifTablet(scale(4), scale(3)),
     backgroundColor: '#FF6B35',
     marginLeft: responsive.ifTablet(spacing.sm, spacing.sm),
+  },
+  
+  // Compact notification styles
+  compactNotificationItem: {
+    paddingVertical: responsive.ifTablet(spacing.sm, scale(6)),
+    marginVertical: responsive.ifTablet(spacing.xs, scale(2)),
+  },
+  compactNotificationMessage: {
+    fontSize: responsive.ifTablet(fontSize.sm, fontSize.xs),
+    marginBottom: responsive.ifTablet(scale(2), scale(1)),
+    lineHeight: responsive.ifTablet(20, 16),
+  },
+  compactCountdownText: {
+    fontSize: responsive.ifTablet(fontSize.xs, scale(10)),
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  compactAlertText: {
+    fontSize: responsive.ifTablet(fontSize.xs, scale(10)),
+    color: '#DC2626',
+    fontWeight: '600',
+    backgroundColor: '#FEF2F2',
+    padding: responsive.ifTablet(scale(4), scale(2)),
+    borderRadius: responsive.ifTablet(scale(4), scale(2)),
+    marginTop: responsive.ifTablet(scale(2), scale(1)),
   },
 
 });
