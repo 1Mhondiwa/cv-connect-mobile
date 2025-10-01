@@ -39,7 +39,7 @@ const ProfileScreen = ({ navigation }) => {
   // Skills management
   const [skills, setSkills] = useState([]);
   const [newSkill, setNewSkill] = useState('');
-  const [newSkillLevel, setNewSkillLevel] = useState('Proficient');
+  const [newSkillLevel, setNewSkillLevel] = useState('Intermediate');
 
   // Education management
   const [education, setEducation] = useState([]);
@@ -113,11 +113,11 @@ const ProfileScreen = ({ navigation }) => {
       const allSkills = [
         ...backendSkills.map(skill => ({
           name: skill.skill_name || skill.name,
-          level: skill.proficiency_level || skill.level || 'Proficient'
+          level: skill.proficiency_level || skill.level || 'Intermediate'
         })),
         ...cvSkills.map(skill => ({
           name: skill.name,
-          level: skill.level || 'Proficient'
+          level: skill.level || 'Intermediate'
         }))
       ];
       
@@ -170,7 +170,7 @@ const ProfileScreen = ({ navigation }) => {
     const backendWorkExperience = profile.work_experience || [];
     setWorkExperience([...cvWorkExperience, ...backendWorkExperience]);
     setNewSkill('');
-    setNewSkillLevel('Proficient');
+    setNewSkillLevel('Intermediate');
     setNewEducation({ degree: '', institution: '', year: '', description: '' });
     setNewWorkExperience({ title: '', company: '', start_date: '', end_date: '', description: '' });
     setNewContact({ type: 'phone', value: '' });
@@ -209,7 +209,7 @@ const ProfileScreen = ({ navigation }) => {
           for (const skill of skillsToAdd) {
             await profileAPI.addSkill({
               skill_name: skill.name,
-              proficiency_level: skill.level || 'Proficient'
+              proficiency_level: skill.level || 'Intermediate'
             });
           }
           
@@ -334,7 +334,7 @@ const ProfileScreen = ({ navigation }) => {
         });
         
         setNewSkill('');
-        setNewSkillLevel('Proficient');
+        setNewSkillLevel('Intermediate');
         
         // Show success message
         Alert.alert('Success', `Skill "${newSkill.trim()}" added successfully!`);
@@ -398,7 +398,7 @@ const ProfileScreen = ({ navigation }) => {
         i === index ? { name: newName, level: newLevel } : skill
       ));
       
-      // If it's a backend skill (not CV skill), update in backend
+      // If it's a backend skill (not CV skill), handle backend update
       const backendSkills = profile?.skills || [];
       const isBackendSkill = backendSkills.some(backendSkill => 
         backendSkill.skill_name === oldSkill.name
@@ -411,9 +411,24 @@ const ProfileScreen = ({ navigation }) => {
         );
         
         if (skillToUpdate?.freelancer_skill_id) {
-          await profileAPI.updateSkill(skillToUpdate.freelancer_skill_id, {
-            proficiency_level: newLevel
-          });
+          // If skill name changed, we need to delete old and add new
+          if (newName !== oldSkill.name) {
+            // Delete the old skill
+            await profileAPI.deleteSkill(skillToUpdate.freelancer_skill_id);
+            
+            // Add the new skill
+            await profileAPI.addSkill({
+              skill_name: newName,
+              proficiency_level: newLevel,
+              years_experience: skillToUpdate.years_experience || 0
+            });
+          } else {
+            // Only proficiency level changed, just update
+            await profileAPI.updateSkill(skillToUpdate.freelancer_skill_id, {
+              proficiency_level: newLevel,
+              years_experience: skillToUpdate.years_experience || 0
+            });
+          }
         }
       }
       
@@ -1098,11 +1113,11 @@ const ProfileScreen = ({ navigation }) => {
       currentSkills = [
         ...backendSkills.map(skill => ({
           name: skill.skill_name || skill.name,
-          level: skill.proficiency_level || skill.level || 'Proficient'
+          level: skill.proficiency_level || skill.level || 'Intermediate'
         })),
         ...cvSkills.map(skill => ({
           name: skill.name,
-          level: skill.level || 'Proficient'
+          level: skill.level || 'Intermediate'
         }))
       ];
     }
@@ -1121,7 +1136,7 @@ const ProfileScreen = ({ navigation }) => {
               {currentSkills.map((skill, index) => (
                 <View key={index} style={styles.skillItem}>
                   <Text style={styles.skillName}>{skill.name}</Text>
-                  <Text style={styles.skillLevel}>{skill.level || 'Proficient'}</Text>
+                  <Text style={styles.skillLevel}>{skill.level || 'Intermediate'}</Text>
                 </View>
               ))}
             </View>
@@ -1470,7 +1485,7 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.inputFieldContainer}>
               <Text style={styles.inputLabel}>Proficiency Level *</Text>
               <View style={styles.skillLevelButtons}>
-                {['Beginner', 'Intermediate', 'Proficient', 'Expert'].map((level) => (
+                {['Beginner', 'Intermediate', 'Advanced', 'Expert'].map((level) => (
                   <TouchableOpacity
                     key={level}
                     onPress={() => setNewSkillLevel(level)}
@@ -1766,7 +1781,7 @@ const ProfileScreen = ({ navigation }) => {
     <Card style={styles.sectionCard} elevation={2}>
       <Card.Content>
         <View style={styles.editSectionHeader}>
-          <MaterialCommunityIcons name="contact-mail" size={24} color="#FF6B35" />
+          <MaterialCommunityIcons name="email" size={24} color="#FF6B35" />
           <Text variant="titleMedium" style={styles.editSectionTitle}>
             Contact Information
           </Text>
