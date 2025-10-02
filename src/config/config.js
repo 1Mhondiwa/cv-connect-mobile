@@ -7,7 +7,7 @@ const environment = Constants.expoConfig?.extra?.environment || 'development';
 // Configuration for different environments
 const configs = {
   development: {
-    API_BASE_URL: 'http://10.0.0.16:5000/api', // Local development server (Expo IP)
+    API_BASE_URL: 'http://192.168.137.1:5000/api', // Local development server (Expo IP)
     TIMEOUT: 30000,
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000,
