@@ -202,12 +202,9 @@ npm run test:coverage
 
 ---
 
-## 📈 Development Stats
+## 🤝 Contributing
 
-- **Total Commits**: 30+ commits
-- **Screens**: 20+ application screens
-- **Components**: 60+ reusable components
-- **Test Coverage**: 85%+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
