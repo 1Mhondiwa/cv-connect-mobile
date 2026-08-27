@@ -38,7 +38,6 @@ export const useVideoCall = (interviewId, isHost = false) => {
         setIsConnecting(false);
         setIsConnected(true);
         setCallStartTime(Date.now());
-        console.log('📹 Video call connected successfully');
       }, 2000);
 
     } catch (error) {
@@ -53,7 +52,6 @@ export const useVideoCall = (interviewId, isHost = false) => {
     try {
       // In a real implementation, you would request camera and microphone permissions
       // For now, we'll simulate permission granted
-      console.log('📹 Requesting camera and microphone permissions...');
       return true;
     } catch (error) {
       console.error('❌ Permission request failed:', error);
@@ -64,19 +62,16 @@ export const useVideoCall = (interviewId, isHost = false) => {
   // Toggle mute
   const toggleMute = () => {
     setIsMuted(!isMuted);
-    console.log('🔇 Mute toggled:', !isMuted);
   };
 
   // Toggle video
   const toggleVideo = () => {
     setIsVideoOn(!isVideoOn);
-    console.log('📹 Video toggled:', !isVideoOn);
   };
 
   // Toggle screen share
   const toggleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
-    console.log('🖥️ Screen share toggled:', !isScreenSharing);
   };
 
   // End call

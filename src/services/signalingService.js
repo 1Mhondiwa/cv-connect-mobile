@@ -25,7 +25,6 @@ class SignalingService {
       });
 
       this.setupEventListeners();
-      console.log('📡 Connected to signaling server');
     } catch (error) {
       console.error('❌ Error connecting to signaling server:', error);
       throw error;
@@ -36,44 +35,37 @@ class SignalingService {
   setupEventListeners() {
     this.socket.on('connect', () => {
       this.isConnected = true;
-      console.log('📡 Signaling server connected');
     });
 
     this.socket.on('disconnect', () => {
       this.isConnected = false;
-      console.log('📡 Signaling server disconnected');
     });
 
     this.socket.on('offer', async (data) => {
-      console.log('📞 Received offer');
       if (this.callbacks.onOffer) {
         await this.callbacks.onOffer(data);
       }
     });
 
     this.socket.on('answer', async (data) => {
-      console.log('📞 Received answer');
       if (this.callbacks.onAnswer) {
         await this.callbacks.onAnswer(data);
       }
     });
 
     this.socket.on('ice-candidate', async (data) => {
-      console.log('🧊 Received ICE candidate');
       if (this.callbacks.onIceCandidate) {
         await this.callbacks.onIceCandidate(data);
       }
     });
 
     this.socket.on('user-joined', (data) => {
-      console.log('👤 User joined:', data.userId);
       if (this.callbacks.onUserJoined) {
         this.callbacks.onUserJoined(data);
       }
     });
 
     this.socket.on('user-left', (data) => {
-      console.log('👤 User left:', data.userId);
       if (this.callbacks.onUserLeft) {
         this.callbacks.onUserLeft(data);
       }
@@ -92,7 +84,6 @@ class SignalingService {
     if (this.socket && this.isConnected) {
       this.roomId = roomId;
       this.socket.emit('join-room', { roomId, userId });
-      console.log('🚪 Joined room:', roomId);
     }
   }
 
@@ -101,7 +92,6 @@ class SignalingService {
     if (this.socket && this.roomId) {
       this.socket.emit('leave-room', { roomId: this.roomId });
       this.roomId = null;
-      console.log('🚪 Left room');
     }
   }
 
@@ -112,7 +102,6 @@ class SignalingService {
         roomId: this.roomId,
         offer: offer,
       });
-      console.log('📞 Offer sent');
     }
   }
 
@@ -123,7 +112,6 @@ class SignalingService {
         roomId: this.roomId,
         answer: answer,
       });
-      console.log('📞 Answer sent');
     }
   }
 
@@ -134,7 +122,6 @@ class SignalingService {
         roomId: this.roomId,
         candidate: candidate,
       });
-      console.log('🧊 ICE candidate sent');
     }
   }
 
@@ -150,7 +137,6 @@ class SignalingService {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
-      console.log('📡 Disconnected from signaling server');
     }
   }
 

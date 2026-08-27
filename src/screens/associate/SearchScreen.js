@@ -35,8 +35,6 @@ const AssociateSearchScreen = ({ navigation }) => {
         skills: selectedSkills.length > 0 ? selectedSkills.join(',') : undefined,
         limit: 50
       });
-      console.log('Search response:', response.data);
-      console.log('Freelancers data structure:', response.data.freelancers);
       setFreelancers(response.data.freelancers || []);
     } catch (error) {
       console.error('Error loading freelancers:', error);
@@ -67,11 +65,9 @@ const AssociateSearchScreen = ({ navigation }) => {
 
   const handleMessageFreelancer = async (freelancer) => {
     try {
-      console.log('Creating conversation with freelancer:', freelancer);
       // First, try to create a conversation or get existing one
       // Use freelancer_id for conversation creation, not user_id
       const response = await messageAPI.createConversation(freelancer.freelancer_id);
-      console.log('Conversation creation response:', response.data);
       const conversationId = response.data.conversation_id;
       
       // Navigate to chat screen with conversation ID

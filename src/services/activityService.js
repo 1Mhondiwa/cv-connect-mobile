@@ -14,7 +14,6 @@ class ActivityService {
   // Connect to SSE endpoint for real-time activity updates
   connect(userId, token) {
     if (this.isConnected) {
-      console.log('Activity service already connected');
       return;
     }
 
@@ -31,7 +30,6 @@ class ActivityService {
 
       this.setupEventHandlers();
       this.isConnected = true;
-      console.log('Activity service connected successfully');
     } catch (error) {
       console.error('Failed to connect to activity service:', error);
       this.scheduleReconnect();
@@ -43,7 +41,6 @@ class ActivityService {
     if (!this.eventSource) return;
 
     this.eventSource.onopen = () => {
-      console.log('Activity SSE connection opened');
       this.isConnected = true;
       this.reconnectAttempts = 0;
     };
@@ -51,7 +48,6 @@ class ActivityService {
     this.eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('Activity update received:', data);
         this.handleActivityUpdate(data);
       } catch (error) {
         console.error('Error parsing activity SSE data:', error);
@@ -65,7 +61,6 @@ class ActivityService {
     };
 
     this.eventSource.onclose = () => {
-      console.log('Activity SSE connection closed');
       this.isConnected = false;
       this.scheduleReconnect();
     };
@@ -87,12 +82,10 @@ class ActivityService {
   // Schedule reconnection attempt
   scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
-    console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${this.reconnectDelay}ms`);
 
     setTimeout(() => {
       if (!this.isConnected) {
@@ -103,7 +96,6 @@ class ActivityService {
 
   // Attempt to reconnect
   reconnect() {
-    console.log('Attempting to reconnect to activity service...');
     this.disconnect();
     
     // Get current user token from store
@@ -123,7 +115,6 @@ class ActivityService {
       this.eventSource = null;
     }
     this.isConnected = false;
-    console.log('Activity service disconnected');
   }
 
   // Check connection status
@@ -139,7 +130,6 @@ class ActivityService {
     try {
       // This will trigger a manual refresh of dashboard data
       // The existing getDashboardData action will handle this
-      console.log('Manual activity refresh triggered');
     } catch (error) {
       console.error('Error refreshing activities:', error);
     }

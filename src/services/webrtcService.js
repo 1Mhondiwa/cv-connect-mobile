@@ -62,7 +62,6 @@ class WebRTCService {
         this.peerConnection.addTrack(track, this.localStream);
       });
 
-      console.log('📹 Local stream obtained');
       return this.localStream;
     } catch (error) {
       console.error('❌ Error getting user media:', error);
@@ -74,14 +73,12 @@ class WebRTCService {
   setupPeerConnectionListeners() {
     // Handle remote stream
     this.peerConnection.ontrack = (event) => {
-      console.log('📹 Remote stream received');
       this.remoteStream = event.streams[0];
     };
 
     // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log('🧊 ICE candidate generated');
         this.sendSignalingMessage({
           type: 'ice-candidate',
           candidate: event.candidate,
@@ -91,12 +88,10 @@ class WebRTCService {
 
     // Handle connection state changes
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('🔗 Connection state:', this.peerConnection.connectionState);
     };
 
     // Handle ICE connection state changes
     this.peerConnection.oniceconnectionstatechange = () => {
-      console.log('🧊 ICE connection state:', this.peerConnection.iceConnectionState);
     };
   }
 
@@ -106,7 +101,6 @@ class WebRTCService {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
       
-      console.log('📞 Offer created');
       return offer;
     } catch (error) {
       console.error('❌ Error creating offer:', error);
@@ -120,7 +114,6 @@ class WebRTCService {
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
       
-      console.log('📞 Answer created');
       return answer;
     } catch (error) {
       console.error('❌ Error creating answer:', error);
@@ -132,7 +125,6 @@ class WebRTCService {
   async setRemoteDescription(sessionDescription) {
     try {
       await this.peerConnection.setRemoteDescription(sessionDescription);
-      console.log('📞 Remote description set');
     } catch (error) {
       console.error('❌ Error setting remote description:', error);
       throw error;
@@ -143,7 +135,6 @@ class WebRTCService {
   async addIceCandidate(candidate) {
     try {
       await this.peerConnection.addIceCandidate(candidate);
-      console.log('🧊 ICE candidate added');
     } catch (error) {
       console.error('❌ Error adding ICE candidate:', error);
       throw error;
@@ -157,7 +148,6 @@ class WebRTCService {
         const videoTrack = this.localStream.getVideoTracks()[0];
         if (videoTrack) {
           await videoTrack._switchCamera();
-          console.log('🔄 Camera switched');
         }
       }
     } catch (error) {
@@ -172,7 +162,6 @@ class WebRTCService {
       const audioTrack = this.localStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
-        console.log('🔊 Audio toggled:', audioTrack.enabled);
         return audioTrack.enabled;
       }
     }
@@ -185,7 +174,6 @@ class WebRTCService {
       const videoTrack = this.localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
-        console.log('📹 Video toggled:', videoTrack.enabled);
         return videoTrack.enabled;
       }
     }
@@ -197,7 +185,6 @@ class WebRTCService {
     if (this.signalingChannel) {
       this.signalingChannel.send(JSON.stringify(message));
     } else {
-      console.log('📡 Signaling message:', message);
       // In a real implementation, this would send to your signaling server
     }
   }
@@ -223,7 +210,6 @@ class WebRTCService {
       this.remoteStream = null;
       this.signalingChannel = null;
       
-      console.log('🧹 WebRTC resources cleaned up');
     } catch (error) {
       console.error('❌ Error cleaning up WebRTC:', error);
     }

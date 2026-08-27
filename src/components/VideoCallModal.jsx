@@ -117,12 +117,11 @@ const VideoCallModal = ({
       setPermissionGranted(true);
 
       // Simulate connection process
-      setTimeout(() => {
-        setIsConnecting(false);
-        setIsConnected(true);
-        setCallStartTime(Date.now());
-        console.log('📹 Video call connected successfully');
-      }, 2000);
+setTimeout(() => {
+          setIsConnecting(false);
+          setIsConnected(true);
+          setCallStartTime(Date.now());
+        }, 2000);
 
     } catch (error) {
       console.error('❌ Error initializing video call:', error);
@@ -135,7 +134,6 @@ const VideoCallModal = ({
     try {
       // In a real implementation, you would request camera and microphone permissions
       // For now, we'll simulate permission granted
-      console.log('📹 Requesting camera and microphone permissions...');
       return true;
     } catch (error) {
       console.error('❌ Permission request failed:', error);
@@ -145,17 +143,14 @@ const VideoCallModal = ({
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
-    console.log('🔇 Mute toggled:', !isMuted);
   };
 
   const toggleVideo = () => {
     setIsVideoOn(!isVideoOn);
-    console.log('📹 Video toggled:', !isVideoOn);
   };
 
   const toggleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
-    console.log('🖥️ Screen share toggled:', !isScreenSharing);
   };
 
   const endCall = () => {

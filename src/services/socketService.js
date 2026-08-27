@@ -14,7 +14,6 @@ class SocketService {
     try {
       const token = await SecureStore.getItemAsync('authToken');
       if (!token) {
-        console.log('No auth token found, cannot connect to socket');
         return;
       }
 
@@ -26,17 +25,14 @@ class SocketService {
       });
 
       this.socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
         this.isConnected = true;
       });
 
       this.socket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket server');
         this.isConnected = false;
       });
 
       this.socket.on('receive_message', (message) => {
-        console.log('Received message:', message);
         // Notify all registered handlers
         this.messageHandlers.forEach(handler => {
           handler(message);
@@ -44,7 +40,6 @@ class SocketService {
       });
 
       this.socket.on('user_typing', (data) => {
-        console.log('User typing:', data);
         // Notify all registered typing handlers
         this.typingHandlers.forEach(handler => {
           handler(data);
@@ -57,7 +52,6 @@ class SocketService {
 
       // Handle interview notifications
       this.socket.on('notification', (notificationData) => {
-        console.log('📱 Received notification:', notificationData);
         // Notify all registered notification handlers
         this.notificationHandlers.forEach(handler => {
           handler(notificationData);
@@ -81,7 +75,6 @@ class SocketService {
   joinUserRoom(userId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('join_user_room', userId);
-      console.log(`📱 Joined user room: ${userId}`);
     }
   }
 
@@ -89,21 +82,18 @@ class SocketService {
   leaveUserRoom(userId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('leave_user_room', userId);
-      console.log(`📱 Left user room: ${userId}`);
     }
   }
 
   joinConversation(conversationId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('join_conversation', conversationId);
-      console.log(`Joined conversation: ${conversationId}`);
     }
   }
 
   leaveConversation(conversationId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('leave_conversation', conversationId);
-      console.log(`Left conversation: ${conversationId}`);
     }
   }
 
@@ -114,7 +104,6 @@ class SocketService {
         sender_id: senderId,
         content: content
       });
-      console.log(`Sent message to conversation: ${conversationId}`);
     }
   }
 

@@ -24,7 +24,6 @@ const SavedProfilesScreen = ({ navigation }) => {
     try {
       setIsLoading(true);
       const response = await associateAPI.getSavedProfiles();
-      console.log('Saved profiles response:', response.data);
       setSavedProfiles(response.data.data || []);
     } catch (error) {
       console.error('Error loading saved profiles:', error);

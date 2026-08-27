@@ -37,34 +37,26 @@ const LoginScreen = ({ navigation }) => {
       dispatch(setToken(null));
       dispatch(setUser(null));
       
-      console.log('Attempting login with:', { email, password: '***' });
       const result = await dispatch(login({ email, password })).unwrap();
-      console.log('Login successful:', result);
       
       // Track mobile login visit
       if (result.user) {
         try {
           await VisitorTrackingService.trackLogin(result.user.user_id);
-          console.log('📱 Mobile login visit tracked');
         } catch (trackingError) {
-          console.log('📱 Mobile login tracking error:', trackingError);
         }
       }
       
       // After successful login, fetch profile to check CV status
       if (result.user && result.user.user_type === 'freelancer') {
         try {
-          console.log('Fetching profile to check CV status...');
           const profileResult = await dispatch(getProfile()).unwrap();
-          console.log('Profile fetched:', profileResult);
         } catch (profileError) {
-          console.log('Profile fetch error:', profileError);
         }
       }
       
       // Navigation will be handled by the AppNavigator based on auth state
     } catch (error) {
-      console.log('Login failed:', error);
       Alert.alert('Login Failed', error || 'Please check your credentials');
     }
   };

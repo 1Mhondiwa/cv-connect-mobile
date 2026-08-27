@@ -9,12 +9,7 @@ export const login = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await authAPI.login(credentials);
-      
-      // Debug: Log the response structure
-      console.log('Login response:', response);
-      console.log('Response data:', response.data);
-      console.log('Token:', response.data?.token);
-      
+
       // Validate token before saving
       if (!response.data?.token) {
         console.error('No token received in response');
@@ -89,9 +84,7 @@ export const logout = createAsyncThunk(
       // Even if there's an error, try to remove the token
       try {
         await tokenService.removeToken();
-      } catch (e) {
-        console.log('Error removing token:', e);
-      }
+      } catch (e) {}
       return rejectWithValue('Logout failed');
     }
   }

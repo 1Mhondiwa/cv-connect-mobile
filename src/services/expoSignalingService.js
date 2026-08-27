@@ -19,12 +19,10 @@ class ExpoSignalingService {
   // Connect to signaling server (simplified)
   connect(serverUrl = 'http://10.0.0.10:5000') {
     try {
-      console.log('📡 Connecting to signaling server (simulated)');
       this.isConnected = true;
       
       // Simulate connection after a delay
       setTimeout(() => {
-        console.log('📡 Signaling server connected (simulated)');
       }, 1000);
     } catch (error) {
       console.error('❌ Error connecting to signaling server:', error);
@@ -36,7 +34,6 @@ class ExpoSignalingService {
   joinRoom(roomId, userId) {
     if (this.isConnected) {
       this.roomId = roomId;
-      console.log('🚪 Joined room (simulated):', roomId);
       
       // Simulate user joined event
       setTimeout(() => {
@@ -50,7 +47,6 @@ class ExpoSignalingService {
   // Leave the current room (simplified)
   leaveRoom() {
     if (this.roomId) {
-      console.log('🚪 Left room (simulated)');
       this.roomId = null;
     }
   }
@@ -58,7 +54,6 @@ class ExpoSignalingService {
   // Send offer (simplified)
   sendOffer(offer) {
     if (this.isConnected && this.roomId) {
-      console.log('📞 Offer sent (simulated)');
       
       // Simulate receiving answer after a delay
       setTimeout(() => {
@@ -74,16 +69,10 @@ class ExpoSignalingService {
 
   // Send answer (simplified)
   sendAnswer(answer) {
-    if (this.isConnected && this.roomId) {
-      console.log('📞 Answer sent (simulated)');
-    }
   }
 
   // Send ICE candidate (simplified)
   sendIceCandidate(candidate) {
-    if (this.isConnected && this.roomId) {
-      console.log('🧊 ICE candidate sent (simulated)');
-    }
   }
 
   // Set callbacks
@@ -96,7 +85,6 @@ class ExpoSignalingService {
     if (this.isConnected) {
       this.leaveRoom();
       this.isConnected = false;
-      console.log('📡 Disconnected from signaling server (simulated)');
     }
   }
 

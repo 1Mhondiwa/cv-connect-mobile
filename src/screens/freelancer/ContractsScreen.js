@@ -48,12 +48,10 @@ const ContractsScreen = ({ navigation }) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching contracts for freelancer...');
       const response = await profileAPI.getHiringHistory();
       
       if (response.data.success) {
         setContracts(response.data.hiring_history || []);
-        console.log('✅ Contracts loaded:', response.data.hiring_history?.length || 0);
       } else {
         setError('Failed to fetch contracts');
         console.error('❌ API returned success: false');
@@ -111,26 +109,18 @@ const ContractsScreen = ({ navigation }) => {
     }
 
     try {
-      console.log('📄 Downloading contract:', contractPath);
-      
       // Construct full URL using config API_BASE_URL (remove /api suffix for file downloads)
       const baseUrl = config.API_BASE_URL.replace('/api', '');
       const fullUrl = contractPath.startsWith('http') 
         ? contractPath 
         : `${baseUrl}${contractPath}`;
-      
-      console.log('📄 Full contract URL:', fullUrl);
-      
+
       // Check if we can open the URL
       const canOpen = await Linking.canOpenURL(fullUrl);
-      console.log('📄 Can open URL:', canOpen);
       
       if (canOpen) {
-        console.log('📄 Opening contract URL...');
         await Linking.openURL(fullUrl);
-        console.log('✅ Contract opened successfully');
       } else {
-        console.log('❌ Cannot open URL:', fullUrl);
         Alert.alert('Error', `Cannot open contract file. URL: ${fullUrl}`);
       }
     } catch (error) {
@@ -142,8 +132,6 @@ const ContractsScreen = ({ navigation }) => {
 
   const handleUploadSignedContract = async (hireId, file) => {
     if (!file) return;
-
-    console.log('📤 Starting signed contract upload for hire ID:', hireId);
 
     // Validate file type
     if (file.mimeType !== 'application/pdf') {
@@ -175,13 +163,9 @@ const ContractsScreen = ({ navigation }) => {
         name: file.name,
       });
 
-      console.log('📤 Uploading signed contract...');
-      
       const response = await profileAPI.uploadSignedContract(hireId, formData);
 
       if (response.data.success) {
-        console.log('✅ Signed contract uploaded successfully');
-        
         // Refresh contracts list
         await fetchContracts();
         
@@ -209,8 +193,6 @@ const ContractsScreen = ({ navigation }) => {
 
   const handleSelectFile = async (hireId) => {
     try {
-      console.log('📁 Opening file picker for hire ID:', hireId);
-      
       const result = await DocumentPicker.getDocumentAsync({
         type: 'application/pdf',
         copyToCacheDirectory: true,
@@ -218,8 +200,6 @@ const ContractsScreen = ({ navigation }) => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        console.log('📁 Selected file:', file);
-        
         await handleUploadSignedContract(hireId, file);
       }
     } catch (error) {

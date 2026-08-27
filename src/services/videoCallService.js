@@ -13,7 +13,6 @@ class VideoCallService {
   // Initialize video call
   async initializeVideoCall(interviewId, isHost = false) {
     try {
-      console.log('📹 Initializing video call for interview:', interviewId);
       
       // Request permissions
       const hasPermission = await this.requestPermissions();
@@ -31,7 +30,6 @@ class VideoCallService {
       setTimeout(() => {
         this.isConnected = true;
         this.callStartTime = Date.now();
-        console.log('📹 Video call connected successfully');
       }, 2000);
 
       return true;
@@ -46,7 +44,6 @@ class VideoCallService {
     try {
       // In a real implementation, you would request camera and microphone permissions
       // For now, we'll simulate permission granted
-      console.log('📹 Requesting camera and microphone permissions...');
       return true;
     } catch (error) {
       console.error('❌ Permission request failed:', error);
@@ -59,7 +56,6 @@ class VideoCallService {
     try {
       // In a real implementation, you would use getUserMedia API
       // For now, we'll simulate getting media
-      console.log('📹 Getting user media...');
       this.localStream = {
         id: 'local-stream',
         type: 'video',
@@ -77,7 +73,6 @@ class VideoCallService {
     try {
       // In a real implementation, you would set up WebRTC peer connection
       // For now, we'll simulate peer connection setup
-      console.log('📹 Setting up peer connection...');
       this.peerConnection = {
         id: 'peer-connection',
         type: 'webrtc',
@@ -94,7 +89,6 @@ class VideoCallService {
   toggleMute() {
     if (this.localStream) {
       // In a real implementation, you would toggle audio track
-      console.log('🔇 Mute toggled');
       return true;
     }
     return false;
@@ -104,7 +98,6 @@ class VideoCallService {
   toggleVideo() {
     if (this.localStream) {
       // In a real implementation, you would toggle video track
-      console.log('📹 Video toggled');
       return true;
     }
     return false;
@@ -114,7 +107,6 @@ class VideoCallService {
   async toggleScreenShare() {
     try {
       // In a real implementation, you would use getDisplayMedia API
-      console.log('🖥️ Screen share toggled');
       return true;
     } catch (error) {
       console.error('❌ Error toggling screen share:', error);
@@ -125,7 +117,6 @@ class VideoCallService {
   // End call
   endCall() {
     try {
-      console.log('📹 Ending video call...');
       
       // Stop local stream
       if (this.localStream) {
@@ -143,7 +134,6 @@ class VideoCallService {
       this.callStartTime = null;
       this.callDuration = 0;
       
-      console.log('📹 Video call ended successfully');
       return true;
     } catch (error) {
       console.error('❌ Error ending video call:', error);

@@ -48,17 +48,14 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
   
   // Get interview ID from route params
   const interviewId = route?.params?.interviewId;
-  console.log('🎯 InterviewFeedbackScreen: Interview ID from params:', interviewId);
 
   // Load feedback on component mount
   useEffect(() => {
-    console.log('🔄 InterviewFeedbackScreen: Loading feedback...');
     dispatch(getMyFeedback());
   }, [dispatch]);
 
   // Clear error and success messages
   useEffect(() => {
-    console.log('📊 InterviewFeedbackScreen state:', { myFeedback, isLoading, error, success });
     if (error) {
       Alert.alert('Error', error);
       dispatch(clearError());
@@ -80,32 +77,14 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
      // Filter feedback data based on interview ID
    const getFilteredFeedback = () => {
      if (!myFeedback || !myFeedback.feedback_list) {
-       console.log('🚫 No feedback data available');
        return null;
      }
-     
-     console.log('🔍 Filtering feedback for interviewId:', interviewId);
-     console.log('📊 Available interviews:', myFeedback.feedback_list.map(i => ({
-       id: i.interview_id,
-       date: i.scheduled_date,
-       hasFeedback: !!i.feedback_id
-     })));
      
      if (interviewId) {
        // Show only specific interview feedback
        const specificInterview = myFeedback.feedback_list.find(interview => 
          interview.interview_id === parseInt(interviewId)
        );
-       
-       console.log('🎯 Specific interview found:', specificInterview ? 'YES' : 'NO');
-       if (specificInterview) {
-         console.log('📄 Interview details:', {
-           id: specificInterview.interview_id,
-           date: specificInterview.scheduled_date,
-           title: specificInterview.job_title,
-           hasFeedback: !!specificInterview.feedback_id
-         });
-       }
        
        if (specificInterview) {
          return {
@@ -120,7 +99,6 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
            }
          };
        } else {
-         console.log('❌ No interview found with ID:', interviewId);
          return {
            feedback_list: [],
            summary: {
@@ -135,9 +113,8 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
        }
      }
      
-     // Show all feedback if no specific interview ID
-     console.log('📜 Showing all feedback (no specific interview ID)');
-     return myFeedback;
+      // Show all feedback if no specific interview ID
+      return myFeedback;
    };
 
   const filteredFeedback = getFilteredFeedback();
@@ -359,12 +336,6 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
           </View>
                  ) : filteredFeedback && filteredFeedback.feedback_list && filteredFeedback.feedback_list.length > 0 ? (
            <>
-             {/* Debug info */}
-             {console.log('🎨 Rendering feedback:', {
-               interviewId,
-               feedbackCount: filteredFeedback.feedback_list.length,
-               interviews: filteredFeedback.feedback_list.map(i => i.interview_id)
-             })}
              {renderSummaryStats()}
              <View style={styles.feedbackList}>
                {filteredFeedback.feedback_list.map(renderFeedbackCard)}

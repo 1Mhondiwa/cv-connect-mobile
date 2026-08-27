@@ -10,8 +10,6 @@ const ChatScreen = ({ route, navigation }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
   const { conversationId, recipientName, recipientId } = route.params;
-  
-  console.log('ChatScreen received params:', { conversationId, recipientName, recipientId });
   const { messages, isLoading, error, typingUsers } = useSelector(state => state.messages);
   const { user } = useSelector(state => state.auth);
   const [messageText, setMessageText] = useState('');
@@ -82,7 +80,6 @@ const ChatScreen = ({ route, navigation }) => {
 
   const loadMessages = async () => {
     try {
-      console.log('Loading messages for conversationId:', conversationId);
       await dispatch(fetchMessages({ conversationId, params: { limit: 50 } })).unwrap();
     } catch (error) {
       console.error('Error loading messages:', error);
