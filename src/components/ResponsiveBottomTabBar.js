@@ -6,7 +6,6 @@ import {
   spacing, 
   fontSize, 
   iconSize, 
-  navigationDimensions,
   isTablet,
   isSmallDevice 
 } from '../utils/responsive';
@@ -97,7 +96,6 @@ export const getResponsiveTabBarStyle = () => {
   
   return {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: responsive.ifTablet(2, 1),
     borderTopColor: '#E0E0E0',
     height: config.height,
     elevation: responsive.ifTablet(12, 8),
@@ -113,7 +111,7 @@ export const getResponsiveTabBarStyle = () => {
     borderTopRightRadius: responsive.ifTablet(20, 16),
     borderBottomLeftRadius: responsive.ifTablet(20, 16),
     borderBottomRightRadius: responsive.ifTablet(20, 16),
-    // Remove default border top since we're using rounded corners
+    // No top border when using rounded corners
     borderTopWidth: 0,
     // Add a subtle border around all sides for better definition
     borderWidth: responsive.ifTablet(2, 1),

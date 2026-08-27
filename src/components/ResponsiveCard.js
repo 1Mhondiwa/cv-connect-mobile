@@ -11,12 +11,18 @@ const ResponsiveCard = ({
   shadow = 'medium',
   ...props
 }) => {
+  const shadowStyleMap = {
+    small: styles.shadowSmall,
+    medium: styles.shadowMedium,
+    large: styles.shadowLarge,
+  };
+
   const cardStyle = [
     styles.card,
     styles[size],
     padding && styles.padding,
     margin && styles.margin,
-    shadow && styles[shadow],
+    shadow && shadowStyleMap[shadow],
     style,
   ];
 
@@ -50,9 +56,9 @@ const styles = StyleSheet.create({
   margin: {
     margin: responsive.ifTablet(spacing.md, spacing.sm),
   },
-  small: shadows.small,
-  medium: shadows.medium,
-  large: shadows.large,
+  shadowSmall: shadows.small,
+  shadowMedium: shadows.medium,
+  shadowLarge: shadows.large,
 });
 
 export default ResponsiveCard;
