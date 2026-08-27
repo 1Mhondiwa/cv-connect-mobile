@@ -7,9 +7,7 @@ export const getInterviews = createAsyncThunk(
   'interview/getInterviews',
   async (params = {}, { rejectWithValue }) => {
     try {
-      console.log('📡 API Call: Getting interviews with params:', params);
       const response = await interviewAPI.getInterviews(params);
-      console.log('✅ API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ API Error:', error.response?.data || error.message);
@@ -34,10 +32,7 @@ export const respondToInvitation = createAsyncThunk(
   'interview/respondToInvitation',
   async ({ interviewId, response }, { rejectWithValue }) => {
     try {
-      console.log(`🌐 API Call: respondToInvitation(${interviewId}, ${response})`);
       const apiResponse = await interviewAPI.respondToInvitation(interviewId, response);
-      console.log('🌐 Raw API Response:', apiResponse);
-      console.log('🌐 API Response Data:', apiResponse.data);
       return apiResponse.data;
     } catch (error) {
       console.error('🌐 API Error:', error.response?.data || error.message);
@@ -74,9 +69,7 @@ export const getMyFeedback = createAsyncThunk(
   'interview/getMyFeedback',
   async (_, { rejectWithValue }) => {
     try {
-      console.log('📡 API Call: Getting my feedback...');
       const response = await interviewAPI.getMyFeedback();
-      console.log('✅ API Response for feedback:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ API Error for feedback:', error.response?.data || error.message);
@@ -204,8 +197,6 @@ const interviewSlice = createSlice({
         state.isLoading = false;
         state.success = 'Response submitted successfully';
         
-        console.log('🔄 Processing respondToInvitation response:', action.payload);
-        
         // Update the interview in the list
         const responseData = action.payload;
         
@@ -229,13 +220,8 @@ const interviewSlice = createSlice({
         if (interviewId) {
           const index = state.interviews.findIndex(interview => interview.interview_id === interviewId);
           if (index !== -1) {
-            console.log(`✅ Updating interview ${interviewId} at index ${index} with:`, updates);
             state.interviews[index] = { ...state.interviews[index], ...updates };
-          } else {
-            console.log(`❌ Interview ${interviewId} not found in interviews list`);
           }
-        } else {
-          console.log('❌ No interviewId found in response, cannot update local state');
         }
       })
       .addCase(respondToInvitation.rejected, (state, action) => {
@@ -289,12 +275,6 @@ const interviewSlice = createSlice({
         state.isLoading = false;
         // Backend returns { success: true, data: { interviews, summary } }
         const responseData = action.payload.data || action.payload;
-        console.log('📊 Processed feedback data:', {
-          interviews: responseData.interviews?.length || 0,
-          withFeedback: responseData.interviews?.filter(i => i.feedback_id).length || 0,
-          withoutFeedback: responseData.interviews?.filter(i => !i.feedback_id).length || 0,
-          summary: responseData.summary
-        });
         state.myFeedback = {
           feedback_list: responseData.interviews || [],
           summary: responseData.summary || {}

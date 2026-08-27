@@ -14,7 +14,6 @@ class ExpoWebRTCService {
   async initialize(isInitiator = false) {
     try {
       this.isInitiator = isInitiator;
-      console.log('🎥 Initializing Expo-compatible video call...');
       return true;
     } catch (error) {
       console.error('❌ Error initializing Expo WebRTC:', error);
@@ -25,7 +24,6 @@ class ExpoWebRTCService {
   // Get user media (simplified - returns mock stream)
   async getUserMedia() {
     try {
-      console.log('📹 Getting user media (Expo compatible)');
       // Return a mock stream object for Expo Go compatibility
       this.localStream = {
         toURL: () => 'mock-local-stream',
@@ -43,7 +41,6 @@ class ExpoWebRTCService {
   // Create offer (simplified)
   async createOffer() {
     try {
-      console.log('📞 Creating offer (simulated)');
       return { type: 'offer', sdp: 'mock-offer' };
     } catch (error) {
       console.error('❌ Error creating offer:', error);
@@ -54,7 +51,6 @@ class ExpoWebRTCService {
   // Create answer (simplified)
   async createAnswer() {
     try {
-      console.log('📞 Creating answer (simulated)');
       return { type: 'answer', sdp: 'mock-answer' };
     } catch (error) {
       console.error('❌ Error creating answer:', error);
@@ -65,11 +61,9 @@ class ExpoWebRTCService {
   // Set remote description (simplified)
   async setRemoteDescription(sessionDescription) {
     try {
-      console.log('📞 Setting remote description (simulated)');
       // Simulate connection after a delay
       setTimeout(() => {
         this.isConnected = true;
-        console.log('🔗 Connection established (simulated)');
       }, 2000);
     } catch (error) {
       console.error('❌ Error setting remote description:', error);
@@ -79,28 +73,15 @@ class ExpoWebRTCService {
 
   // Add ICE candidate (simplified)
   async addIceCandidate(candidate) {
-    try {
-      console.log('🧊 Adding ICE candidate (simulated)');
-    } catch (error) {
-      console.error('❌ Error adding ICE candidate:', error);
-      throw error;
-    }
   }
 
   // Switch camera (simplified)
   async switchCamera() {
-    try {
-      console.log('🔄 Camera switched (simulated)');
-    } catch (error) {
-      console.error('❌ Error switching camera:', error);
-      throw error;
-    }
   }
 
   // Toggle audio (simplified)
   toggleAudio() {
     try {
-      console.log('🔊 Audio toggled (simulated)');
       return true;
     } catch (error) {
       console.error('❌ Error toggling audio:', error);
@@ -111,7 +92,6 @@ class ExpoWebRTCService {
   // Toggle video (simplified)
   toggleVideo() {
     try {
-      console.log('📹 Video toggled (simulated)');
       return true;
     } catch (error) {
       console.error('❌ Error toggling video:', error);
@@ -121,7 +101,6 @@ class ExpoWebRTCService {
 
   // Send signaling message (simplified)
   sendSignalingMessage(message) {
-    console.log('📡 Signaling message (simulated):', message);
   }
 
   // Set signaling channel (simplified)
@@ -131,7 +110,6 @@ class ExpoWebRTCService {
 
   // Clean up resources
   cleanup() {
-    console.log('🧹 Cleaning up Expo WebRTC resources');
     this.localStream = null;
     this.remoteStream = null;
     this.isConnected = false;

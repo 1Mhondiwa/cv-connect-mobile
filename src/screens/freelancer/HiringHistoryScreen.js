@@ -41,12 +41,10 @@ const HiringHistoryScreen = ({ navigation }) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching hiring history for freelancer...');
       const response = await profileAPI.getHiringHistory();
       
       if (response.data.success) {
         setHiringHistory(response.data.hiring_history);
-        console.log('✅ Hiring history fetched:', response.data.hiring_history);
       } else {
         setError('Failed to fetch hiring history');
         console.error('❌ API returned success: false');

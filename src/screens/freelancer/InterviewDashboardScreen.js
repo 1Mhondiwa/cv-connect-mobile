@@ -59,29 +59,14 @@ const InterviewDashboardScreen = ({ navigation }) => {
   // Load interviews on component mount and when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 Loading interviews on screen focus...');
-      console.log('👤 User authenticated:', isAuthenticated);
-      console.log('👤 User type:', userType);
-      console.log('👤 User data:', user);
-      
       if (isAuthenticated && userType === 'freelancer') {
-        console.log('💾 Current local status updates:', localStatusUpdates);
-        
         // Refresh from backend
         dispatch(getInterviews()).then((result) => {
-          console.log('✅ Dispatched getInterviews on screen focus');
           if (result.payload && result.payload.interviews) {
-            console.log('📊 Backend interviews:', result.payload.interviews.map(i => ({ 
-              id: i.interview_id, 
-              status: i.status,
-              title: i.request_title 
-            })));
-            
             // After backend refresh, restore any local status changes that were saved
             Object.entries(localStatusUpdates).forEach(([interviewId, localStatus]) => {
               const backendInterview = result.payload.interviews.find(i => i.interview_id === parseInt(interviewId));
               if (backendInterview && backendInterview.status === 'scheduled') {
-                console.log(`🔄 Restoring saved local status for interview ${interviewId}: ${localStatus}`);
                 dispatch(updateInterviewInList({ 
                   interviewId: parseInt(interviewId), 
                   updates: { status: localStatus } 
@@ -90,8 +75,6 @@ const InterviewDashboardScreen = ({ navigation }) => {
             });
           }
         });
-      } else {
-        console.log('❌ User not authenticated or not a freelancer');
       }
     }, [dispatch, isAuthenticated, userType, localStatusUpdates])
   );
@@ -141,9 +124,6 @@ const InterviewDashboardScreen = ({ navigation }) => {
           text: 'Confirm',
           onPress: async () => {
             try {
-              console.log(`📝 Responding to interview ${interviewId} with: ${response}`);
-              console.log('📊 Current interview status before response:', interviews.find(i => i.interview_id === interviewId)?.status);
-              
               // Always update local state immediately for better UX
               const newStatus = response === 'accepted' ? 'accepted' : 'declined';
               dispatch(updateInterviewInList({ 
@@ -157,15 +137,10 @@ const InterviewDashboardScreen = ({ navigation }) => {
                 [interviewId]: newStatus
               }));
               
-              console.log(`✅ Immediately updated local state to: ${newStatus} and saved for persistence`);
-              
               // Then try to update the backend
               try {
                 const responseResult = await dispatch(respondToInvitation({ interviewId: interviewId, response })).unwrap();
-                console.log('📦 API Response from respondToInvitation:', responseResult);
-                console.log('✅ Backend updated successfully');
               } catch (apiError) {
-                console.log('⚠️ Backend API failed, but local state already updated:', apiError);
                 // Don't throw error - local state is already updated for good UX
                 
                 // Show user-friendly message for API issues
@@ -175,34 +150,25 @@ const InterviewDashboardScreen = ({ navigation }) => {
                   [{ text: 'OK' }]
                 );
               }
-              
-              console.log('✅ Interview response completed');
             } catch (error) {
               console.error('❌ Failed to respond to interview:', error);
               
               // Handle "already responded" error specifically
               if (error.includes('already been responded to') || error.includes('already responded')) {
-                console.log('🔄 Interview already responded to, refreshing to sync state...');
-                
                 // Force refresh to get the actual current state from backend
                 try {
                   const refreshResult = await dispatch(getInterviews()).unwrap();
-                  console.log('✅ Refreshed interviews after "already responded" error');
-                  console.log('📊 Full refresh result:', refreshResult);
                   
                   // Check if the specific interview status was updated
                   const refreshedInterview = refreshResult.interviews?.find(i => i.interview_id === interviewId);
-                  console.log(`📊 Interview ${interviewId} status after refresh:`, refreshedInterview?.status);
                   
                   if (refreshedInterview && refreshedInterview.status === 'scheduled') {
-                    console.log('⚠️ Backend still returns "scheduled" status, forcing local update');
                     // If backend still shows scheduled, manually set it to accepted
                     const newStatus = response === 'accepted' ? 'accepted' : 'declined';
                     dispatch(updateInterviewInList({ 
                       interviewId: interviewId, 
                       updates: { status: newStatus } 
                     }));
-                    console.log(`🔄 Force updated interview ${interviewId} status to: ${newStatus}`);
                   }
                   
                   // Show user-friendly message
@@ -230,7 +196,6 @@ const InterviewDashboardScreen = ({ navigation }) => {
 
   // Join video call
   const joinVideoCall = (interview) => {
-    console.log('🎥 Joining video call for interview:', interview.interview_id);
     navigation.navigate('VideoCall', {
       interviewId: interview.interview_id,
       interviewTitle: interview.request_title || 'Interview',

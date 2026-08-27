@@ -10,8 +10,6 @@ class VisitorTrackingService {
         user_id: userId ? parseInt(userId) : null,
       };
 
-      console.log('📱 Mobile tracking visit:', payload);
-
       await api.post('/visitor/track', payload, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -19,7 +17,6 @@ class VisitorTrackingService {
         },
       });
       
-      console.log('✅ Mobile visit tracked successfully');
     } catch (error) {
       console.error('❌ Mobile visitor tracking failed:', error);
     }

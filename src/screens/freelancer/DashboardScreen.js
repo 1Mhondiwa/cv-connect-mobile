@@ -60,13 +60,7 @@ const DashboardScreen = ({ navigation }) => {
     const { user, token } = useSelector((state) => state.auth);
     const { dashboardData, profile, skills, isLoading } = useSelector((state) => state.freelancer);
     const { notifications, unreadCount, isLoading: notificationsLoading } = useSelector((state) => state.notifications);
-    // Debug logging for component state
-    console.log('🚀 DashboardScreen rendered');
-    console.log('🚀 user:', user);
-    console.log('🚀 dashboardData:', dashboardData);
-    console.log('🚀 profile:', profile);
-    
-      // Local state for activities
+    // Local state for activities
   const [activities, setActivities] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [isRefreshingActivities, setIsRefreshingActivities] = useState(false);
@@ -113,7 +107,6 @@ const DashboardScreen = ({ navigation }) => {
   // Periodic profile refresh for real-time updates (every 5 minutes)
   useEffect(() => {
     const profileRefreshTimer = setInterval(() => {
-      console.log('🔄 Periodic profile refresh for real-time updates...');
       dispatch(getProfile());
     }, 300000); // 5 minutes
 
@@ -123,7 +116,6 @@ const DashboardScreen = ({ navigation }) => {
   // Periodic notifications refresh for real-time updates (every 60 seconds)
   useEffect(() => {
     const notificationsRefreshTimer = setInterval(() => {
-      console.log('🔔 Periodic notifications refresh for real-time updates...');
       fetchNotificationData();
     }, 60000); // 60 seconds
 
@@ -133,7 +125,6 @@ const DashboardScreen = ({ navigation }) => {
   // Refresh notifications when screen is focused (similar to interviews screen)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('📱 Dashboard screen focused - refreshing notifications...');
       fetchNotificationData();
     }, [])
   );
@@ -141,7 +132,6 @@ const DashboardScreen = ({ navigation }) => {
   // Refresh dashboard data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      console.log('📱 Dashboard screen focused - refreshing all data...');
       loadDashboardData();
       fetchActivity();
       fetchHiringData();
@@ -157,25 +147,10 @@ const DashboardScreen = ({ navigation }) => {
   // Update activities when dashboard data changes (fallback)
   useEffect(() => {
     if (dashboardData?.recent_activity && activities.length === 0) {
-      console.log('🔄 Dashboard data updated, syncing activities...');
-      console.log('📊 Dashboard activities:', dashboardData.recent_activity);
       setActivities(dashboardData.recent_activity);
     }
   }, [dashboardData?.recent_activity, activities.length]);
   
-
-
-  // Debug: Log activities state changes
-  useEffect(() => {
-    console.log('📊 Activities state updated:', activities);
-  }, [activities]);
-
-
-
-
-
-
-
   const setupRealTimeUpdates = () => {
     // Connect to WebSocket if not already connected
     if (!socketService.getConnectionStatus()) {
@@ -187,38 +162,24 @@ const DashboardScreen = ({ navigation }) => {
       socketService.joinUserRoom(user.user_id);
     }
 
-    // Register message handler for real-time updates
-    const messageHandlerId = socketService.onMessage((message) => {
-      console.log('📨 Real-time message received:', message);
-      
-      // Note: Message count updates are now handled by navigation badge
-      // The Redux store will automatically update the unread count
-    });
-
     // Register notification handler for interview notifications
     const notificationHandlerId = socketService.onNotification((notificationData) => {
-      console.log('📱 Real-time notification received:', notificationData);
-      
       if (notificationData.type === 'interview_notification') {
         // Add the new notification to Redux store
         dispatch(addNotification(notificationData.notification));
-        console.log('✅ Added new notification to Redux store');
       }
       
       // Refresh notifications to get the latest from backend
       fetchNotificationData();
-      console.log('🔄 Refreshed notifications after real-time update');
     });
 
     // Store handler IDs for cleanup (you might want to store these in component state)
-    return { messageHandlerId, notificationHandlerId };
+    return { notificationHandlerId };
   };
 
   const fetchNotificationData = async () => {
     try {
-      console.log('📱 Fetching notifications...');
       await dispatch(fetchNotifications({ limit: 20 })).unwrap();
-      console.log('📱 Notifications fetched successfully');
     } catch (error) {
       console.error('❌ Failed to fetch notifications:', error);
     }
@@ -232,7 +193,6 @@ const DashboardScreen = ({ navigation }) => {
       }
 
       // Navigate to the dedicated notifications screen to show all notifications
-      console.log('📱 Navigating to Notifications screen from dashboard notification');
       navigation.navigate('Notifications');
     } catch (error) {
       console.error('❌ Failed to handle notification press:', error);
@@ -304,16 +264,10 @@ const DashboardScreen = ({ navigation }) => {
     try {
       // Dashboard data is loaded via Redux store
       // The component will automatically re-render when the store updates
-      console.log('✅ Dashboard data loading handled by Redux store');
       
       // Track mobile dashboard visit
       if (user?.user_id) {
-        try {
-          await VisitorTrackingService.trackDashboard(user.user_id);
-          console.log('📱 Mobile dashboard visit tracked');
-        } catch (trackingError) {
-          console.log('📱 Mobile dashboard tracking error:', trackingError);
-        }
+        await VisitorTrackingService.trackDashboard(user.user_id);
       }
     } catch (error) {
       // Error loading dashboard data
@@ -325,31 +279,21 @@ const DashboardScreen = ({ navigation }) => {
 
   const fetchActivity = async () => {
     try {
-      console.log('🔍 Fetching activities...');
-      
       // First try to get activities from the dedicated endpoint
       if (profileAPI && typeof profileAPI.getActivity === 'function') {
-        try {
-          const response = await profileAPI.getActivity();
-          console.log('📡 API Response from /freelancer/activity:', response);
-          
-          if (response.data.success) {
-            console.log('✅ Activities fetched successfully from API');
-            setActivities(response.data.activities || []);
-            setActivityLoading(false);
-            return;
-          }
-        } catch (apiError) {
-          console.log('⚠️ API call failed, using dashboard data fallback');
+        const response = await profileAPI.getActivity();
+        
+        if (response.data.success) {
+          setActivities(response.data.activities || []);
+          setActivityLoading(false);
+          return;
         }
       }
       
       // Fallback: use activities from dashboard data
       if (dashboardData?.recent_activity) {
-        console.log('🔄 Using activities from dashboard data');
         setActivities(dashboardData.recent_activity);
       } else {
-        console.log('📭 No activities available');
         setActivities([]);
       }
     } catch (error) {
@@ -363,9 +307,7 @@ const DashboardScreen = ({ navigation }) => {
   const refreshActivities = async () => {
     try {
       setIsRefreshingActivities(true);
-      console.log('🔄 Refreshing activities...');
       await fetchActivity();
-      console.log('✅ Activities refreshed successfully');
     } catch (error) {
       console.error('❌ Error refreshing activities:', error);
       // Don't show alert, just log the error
@@ -377,20 +319,17 @@ const DashboardScreen = ({ navigation }) => {
   const fetchHiringData = async () => {
     try {
       setHiringLoading(true);
-      console.log('🔄 Fetching hiring data...');
       
       // Fetch hiring statistics
       const statsResponse = await profileAPI.getHiringStats();
       if (statsResponse.data.success) {
         setHiringStats(statsResponse.data.stats);
-        console.log('✅ Hiring stats fetched:', statsResponse.data.stats);
       }
       
       // Fetch hiring history
       const historyResponse = await profileAPI.getHiringHistory();
       if (historyResponse.data.success) {
         setHiringHistory(historyResponse.data.hiring_history);
-        console.log('✅ Hiring history fetched:', historyResponse.data.hiring_history);
       }
     } catch (error) {
       console.error('❌ Error fetching hiring data:', error);
@@ -438,12 +377,6 @@ const DashboardScreen = ({ navigation }) => {
 
 
 
-  // Debug logging for stats
-  console.log('📊 Building stats array...');
-  console.log('📊 profile?.skills?.length:', profile?.skills?.length);
-  console.log('📊 profile?.cv_skills?.length:', profile?.cv_skills?.length);
-  console.log('📊 profile?.completed_jobs?.length:', profile?.completed_jobs?.length);
-  
   const stats = [
     { 
       title: 'Skills', 
@@ -463,8 +396,6 @@ const DashboardScreen = ({ navigation }) => {
     });
   }
   
-  console.log('📊 Final stats array:', stats);
-
   const quickActions = [];
 
   if (isLoading) {
@@ -708,7 +639,6 @@ const DashboardScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={() => {
-              console.log('🔄 Manual profile refresh for stats...');
               dispatch(getProfile());
             }}
             activeOpacity={0.7}
@@ -766,7 +696,6 @@ const DashboardScreen = ({ navigation }) => {
               </View>
             ) : activities.length > 0 ? (
               (() => {
-                console.log('📊 Rendering activities:', activities);
                 return activities.map((activity, index) => (
                   <View key={index} style={styles.activityItem}>
                     <View style={[styles.activityDot, { backgroundColor: getActivityColor(activity.status) }]} />

@@ -117,7 +117,6 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const initializeVideoCall = async () => {
     try {
-      console.log('🎥 Initializing WebRTC video call...');
       setIsConnecting(true);
       setError(null);
 
@@ -130,7 +129,6 @@ const VideoCallScreen = ({ route, navigation }) => {
       }
 
       // Audio mode is handled by the WebRTC service
-      console.log('🎵 Audio mode configured for video call');
 
       // Initialize WebRTC
       const isInitiator = isHost || false;
@@ -167,26 +165,20 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const requestPermissions = async () => {
     try {
-      console.log('📹 Requesting camera and microphone permissions...');
-
       // Request camera permission using the new hook
       let cameraGranted = false;
       if (cameraPermission?.granted) {
         cameraGranted = true;
-        console.log('📹 Camera permission already granted');
       } else if (requestCameraPermission) {
         const cameraResult = await requestCameraPermission();
         cameraGranted = cameraResult.granted;
-        console.log('📹 Camera permission status:', cameraResult.granted);
       } else {
-        console.log('📹 Camera permission hook not available, assuming granted');
         cameraGranted = true; // Fallback for development
       }
 
       // For microphone permission, we'll assume it's granted for now
       // In a real app, you might want to use expo-av or handle it differently
       let audioGranted = true;
-      console.log('🎤 Microphone permission: assuming granted for video call');
 
       const hasPermissions = cameraGranted && audioGranted;
       
@@ -219,7 +211,6 @@ const VideoCallScreen = ({ route, navigation }) => {
     try {
       const audioEnabled = webrtcService.toggleAudio();
       setIsMuted(!audioEnabled);
-      console.log('🔊 Audio toggled:', audioEnabled);
     } catch (err) {
       console.error('❌ Error toggling audio:', err);
     }
@@ -229,7 +220,6 @@ const VideoCallScreen = ({ route, navigation }) => {
     try {
       const videoEnabled = webrtcService.toggleVideo();
       setIsVideoOn(videoEnabled);
-      console.log('📹 Video toggled:', videoEnabled);
     } catch (err) {
       console.error('❌ Error toggling video:', err);
     }
@@ -243,7 +233,6 @@ const VideoCallScreen = ({ route, navigation }) => {
           ? 'front'
           : 'back'
       );
-      console.log('🔄 Camera switched to:', cameraType === 'back' ? 'front' : 'back');
     } catch (err) {
       console.error('❌ Error switching camera:', err);
     }
@@ -264,7 +253,6 @@ const VideoCallScreen = ({ route, navigation }) => {
   // Handle incoming offer
   const handleOffer = async (data) => {
     try {
-      console.log('📞 Handling offer');
       await webrtcService.setRemoteDescription(data.offer);
       const answer = await webrtcService.createAnswer();
       signalingService.sendAnswer(answer);
@@ -276,7 +264,6 @@ const VideoCallScreen = ({ route, navigation }) => {
   // Handle incoming answer
   const handleAnswer = async (data) => {
     try {
-      console.log('📞 Handling answer');
       await webrtcService.setRemoteDescription(data.answer);
     } catch (error) {
       console.error('❌ Error handling answer:', error);
@@ -286,7 +273,6 @@ const VideoCallScreen = ({ route, navigation }) => {
   // Handle incoming ICE candidate
   const handleIceCandidate = async (data) => {
     try {
-      console.log('🧊 Handling ICE candidate');
       await webrtcService.addIceCandidate(data.candidate);
     } catch (error) {
       console.error('❌ Error handling ICE candidate:', error);
@@ -295,7 +281,6 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   // Handle user joined
   const handleUserJoined = (data) => {
-    console.log('👤 User joined room');
     setWaitingMessage('User joined, establishing connection...');
     
     // Simulate connection establishment
@@ -315,7 +300,6 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   // Handle user left
   const handleUserLeft = (data) => {
-    console.log('👤 User left room');
     setWaitingMessage('User disconnected');
     setIsConnected(false);
   };
@@ -329,7 +313,6 @@ const VideoCallScreen = ({ route, navigation }) => {
   // Start call (for initiator)
   const startCall = async () => {
     try {
-      console.log('📞 Starting call as initiator');
       const offer = await webrtcService.createOffer();
       signalingService.sendOffer(offer);
       setWaitingMessage('Waiting for answer...');
@@ -341,13 +324,11 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   // Wait for call (for receiver)
   const waitForCall = () => {
-    console.log('📞 Waiting for call');
     setWaitingMessage('Waiting for call...');
   };
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
-    console.log('📱 Fullscreen toggled:', !isFullscreen);
   };
 
   const toggleScreenSharing = async () => {
@@ -366,14 +347,12 @@ const VideoCallScreen = ({ route, navigation }) => {
         // Stop screen sharing
         await ScreenCapture.stopScreenCaptureAsync();
         setIsScreenSharing(false);
-        console.log('📺 Screen sharing stopped');
       } else {
         // Start screen sharing
         const hasPermission = await ScreenCapture.requestPermissionsAsync();
         if (hasPermission.granted) {
           await ScreenCapture.startScreenCaptureAsync();
           setIsScreenSharing(true);
-          console.log('📺 Screen sharing started');
         } else {
           Alert.alert(
             'Permission Required',
@@ -393,13 +372,11 @@ const VideoCallScreen = ({ route, navigation }) => {
   };
 
   const endCall = async () => {
-    console.log('📞 Ending video call');
     await cleanup();
     navigation.goBack();
   };
 
   const cleanup = async () => {
-    console.log('🧹 Cleaning up video call resources');
     setIsConnected(false);
     setIsConnecting(false);
     setCallStartTime(null);
@@ -438,7 +415,6 @@ const VideoCallScreen = ({ route, navigation }) => {
     // Reset audio mode
     try {
       // Audio mode reset is handled by the WebRTC service
-      console.log('🎵 Audio mode reset for video call end');
     } catch (err) {
       console.error('❌ Error resetting audio mode:', err);
     }
@@ -510,11 +486,10 @@ const VideoCallScreen = ({ route, navigation }) => {
              <TouchableOpacity 
                style={isFullscreen ? styles.fullscreenVideo : styles.remoteVideoContainer}
                onPress={() => {
-                 if (!isFullscreen) {
-                   setIsFullscreen(true);
-                   console.log('📱 Remote video fullscreen');
-                 }
-               }}
+                  if (!isFullscreen) {
+                    setIsFullscreen(true);
+                  }
+                }}
                activeOpacity={0.8}
              >
                <View style={styles.remoteVideo}>
@@ -561,14 +536,12 @@ const VideoCallScreen = ({ route, navigation }) => {
              <TouchableOpacity 
                style={isFullscreen ? styles.localVideoSmall : styles.localVideoContainer}
                onPress={() => {
-                 if (isFullscreen) {
-                   setIsFullscreen(false);
-                   console.log('📱 Local video fullscreen');
-                 } else {
-                   setIsFullscreen(true);
-                   console.log('📱 Local video fullscreen');
-                 }
-               }}
+                  if (isFullscreen) {
+                    setIsFullscreen(false);
+                  } else {
+                    setIsFullscreen(true);
+                  }
+                }}
                activeOpacity={0.8}
              >
                {isVideoOn && permissionStatus.camera === 'granted' ? (

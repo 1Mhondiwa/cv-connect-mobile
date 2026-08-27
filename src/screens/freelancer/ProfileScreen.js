@@ -128,7 +128,6 @@ const ProfileScreen = ({ navigation }) => {
       if (education.length === 0) {
         const cvEducation = profile.cv?.parsed_data?.education || [];
         const backendEducation = profile.education || [];
-        console.log('Loading education data:', { cvEducation, backendEducation, combined: [...cvEducation, ...backendEducation] });
         setEducation([...cvEducation, ...backendEducation]);
       }
       
@@ -137,7 +136,6 @@ const ProfileScreen = ({ navigation }) => {
       if (workExperience.length === 0) {
         const cvWorkExperience = profile.cv?.parsed_data?.work_experience || [];
         const backendWorkExperience = profile.work_experience || [];
-        console.log('Loading work experience data:', { cvWorkExperience, backendWorkExperience, combined: [...cvWorkExperience, ...backendWorkExperience] });
         setWorkExperience([...cvWorkExperience, ...backendWorkExperience]);
       }
     }
@@ -1083,9 +1081,6 @@ const ProfileScreen = ({ navigation }) => {
     }
 
     try {
-      console.log('Opening CV viewer for file:', profile.cv.stored_filename);
-      console.log('CV URL will be:', `${config.API_BASE_URL.replace('/api', '')}/cv/${profile.cv.stored_filename}`);
-      
       // Show the CV viewer modal
       setCvViewerVisible(true);
       
@@ -1170,13 +1165,6 @@ const ProfileScreen = ({ navigation }) => {
   const renderEducation = () => {
     // Use education from local state when editing, otherwise use profile data
     const currentEducation = isEditing ? education : (profile?.cv?.parsed_data?.education || profile?.education || []);
-    console.log('Rendering education with data:', { 
-      isEditing, 
-      localEducation: education, 
-      cvEducation: profile?.cv?.parsed_data?.education, 
-      backendEducation: profile?.education,
-      currentEducation 
-    });
     
     return (
       <Card style={styles.sectionCard} elevation={2}>
@@ -1290,13 +1278,6 @@ const ProfileScreen = ({ navigation }) => {
   const renderWorkExperience = () => {
     // Use work experience from local state when editing, otherwise use profile data
     const currentWorkExperience = isEditing ? workExperience : (profile?.cv?.parsed_data?.work_experience || profile?.work_experience || []);
-    console.log('Rendering work experience with data:', { 
-      isEditing, 
-      localWorkExperience: workExperience, 
-      cvWorkExperience: profile?.cv?.parsed_data?.work_experience, 
-      backendWorkExperience: profile?.work_experience,
-      currentWorkExperience 
-    });
     
     return (
       <Card style={styles.sectionCard} elevation={2}>
@@ -2005,10 +1986,6 @@ const ProfileScreen = ({ navigation }) => {
                     onError={(error) => {
                       console.error('Profile image load error:', error);
                       console.error('Profile image URL:', `${config.API_BASE_URL.replace('/api', '')}${profile.profile_picture_url}`);
-                    }}
-                    onLoad={() => {
-                      console.log('Profile image loaded successfully');
-                      console.log('Profile image URL:', `${config.API_BASE_URL.replace('/api', '')}${profile.profile_picture_url}`);
                     }}
                   />
                 </View>

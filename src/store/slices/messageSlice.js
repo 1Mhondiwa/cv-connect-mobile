@@ -18,9 +18,7 @@ export const fetchMessages = createAsyncThunk(
   'messages/fetchMessages',
   async ({ conversationId, params }, { rejectWithValue }) => {
     try {
-      console.log('fetchMessages called with conversationId:', conversationId);
       const response = await messageAPI.getMessages(conversationId, params);
-      console.log('fetchMessages response:', response.data);
       return { conversationId, messages: response.data };
     } catch (error) {
       console.error('fetchMessages error:', error);
@@ -57,9 +55,7 @@ export const markConversationAsRead = createAsyncThunk(
   'messages/markConversationAsRead',
   async (conversationId, { rejectWithValue }) => {
     try {
-      console.log('markConversationAsRead called with conversationId:', conversationId);
       const response = await messageAPI.markAsRead(conversationId);
-      console.log('markConversationAsRead response:', response.data);
       return { conversationId, ...response.data };
     } catch (error) {
       console.error('markConversationAsRead error:', error);
