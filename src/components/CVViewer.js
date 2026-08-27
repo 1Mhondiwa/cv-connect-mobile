@@ -20,12 +20,8 @@ try {
   // Check if the module is properly initialized
   if (PdfModule && typeof PdfModule.default === 'function') {
     Pdf = PdfModule.default;
-  } else {
-    console.log('PDF viewer module not properly initialized');
   }
-} catch (error) {
-  console.log('PDF viewer not available:', error.message);
-}
+} catch (error) {}
 
 const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
   const [urlStatus, setUrlStatus] = useState('checking');
@@ -52,12 +48,6 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
 
   const cleanCvFilename = cleanFilename(cvFilename);
 
-  // Debug logging
-  console.log('CVViewer - cvUrl:', cvUrl);
-  console.log('CVViewer - cvFilename:', cvFilename);
-  console.log('CVViewer - Cleaned filename:', cleanCvFilename);
-  console.log('CVViewer - CV Data:', cvData);
-
   // Check URL validity when component mounts or URL changes
   useEffect(() => {
     if (visible && cvUrl) {
@@ -68,16 +58,13 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
   const checkUrlValidity = async () => {
     try {
       setUrlStatus('checking');
-      console.log('Checking URL validity:', cvUrl);
       
       // Set the URL as valid immediately and skip validation
       // This prevents the mobile app from getting stuck on network requests
-      console.log('Skipping URL validation for mobile app compatibility');
       setValidUrl(cvUrl);
       setUrlStatus('valid');
       
     } catch (error) {
-      console.log('Error in URL validation:', error);
       setUrlStatus('invalid');
     }
   };
@@ -92,7 +79,6 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
     }
 
     try {
-      console.log('Attempting to view CV at URL:', urlToUse);
       
       // Validate URL format
       if (!urlToUse || !urlToUse.startsWith('http')) {
@@ -103,10 +89,8 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
       // For PDFs, show in-app viewer if available, otherwise open in browser
       if (cleanCvFilename.toLowerCase().endsWith('.pdf')) {
         if (Pdf) {
-          console.log('Opening PDF in-app viewer');
           setShowPdfViewer(true);
         } else {
-          console.log('PDF viewer not available, opening in browser');
           // Fallback to browser if PDF viewer not available
           try {
             await Linking.openURL(urlToUse);
@@ -119,7 +103,6 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
           }
         }
       } else {
-        console.log('Opening non-PDF file in browser');
         // For other file types, try to open in browser
         try {
           await Linking.openURL(urlToUse);
@@ -234,10 +217,8 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
                 source={{ uri: validUrl || cvUrl }}
                 style={styles.pdf}
                 onLoadComplete={(numberOfPages, filePath) => {
-                  console.log(`PDF loaded: ${numberOfPages} pages`);
                 }}
                 onPageChanged={(page, numberOfPages) => {
-                  console.log(`Page changed to: ${page}/${numberOfPages}`);
                 }}
                 onError={(error) => {
                   console.error('PDF error:', error);
@@ -245,7 +226,6 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
                   setShowPdfViewer(false);
                 }}
                 onPressLink={(uri) => {
-                  console.log(`Link pressed: ${uri}`);
                 }}
               />
             ) : (

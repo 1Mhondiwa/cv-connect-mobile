@@ -78,8 +78,6 @@ const CVUploadScreen = ({ navigation }) => {
       
       formData.append('cv', fileObject);
 
-      console.log('Uploading CV:', selectedFile.name);
-
       const result = await dispatch(uploadCV(formData)).unwrap();
       
       Alert.alert(

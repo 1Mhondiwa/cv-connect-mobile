@@ -84,9 +84,7 @@ const AssociateRequestScreen = () => {
     setLoading(true);
 
     try {
-      console.log('Submitting associate request:', formData);
       const response = await authAPI.submitAssociateRequest(formData);
-      console.log('Response received:', response.data);
       
       if (response.data.success) {
         showToast('Request submitted successfully! ESC will review your application.');

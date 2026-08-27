@@ -35,9 +35,7 @@ export const updateProfile = createAsyncThunk(
   'freelancer/updateProfile',
   async (profileData, { rejectWithValue }) => {
     try {
-      console.log('updateProfile thunk: Sending data:', profileData);
       const response = await profileAPI.updateProfile(profileData);
-      console.log('updateProfile thunk: Response received:', response.data);
       return response.data;
     } catch (error) {
       // Preserve the full error object for debugging
@@ -59,9 +57,7 @@ export const updateAvailability = createAsyncThunk(
   'freelancer/updateAvailability',
   async (availabilityStatus, { rejectWithValue }) => {
     try {
-      console.log('updateAvailability thunk: Sending availability:', availabilityStatus);
       const response = await profileAPI.updateAvailability(availabilityStatus);
-      console.log('updateAvailability thunk: Response received:', response.data);
       return response.data;
     } catch (error) {
       console.error('updateAvailability thunk error:', error);

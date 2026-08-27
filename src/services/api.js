@@ -35,9 +35,6 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    // Debug: Log successful responses
-    console.log('API Response:', response.status, response.config.url);
-    console.log('Response data:', response.data);
     return response;
   },
   async (error) => {
@@ -68,7 +65,6 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response.status === 401) {
-      console.log('Unauthorized access, removing token');
       await SecureStore.deleteItemAsync('authToken');
       // Let the component handle the redirect
       return Promise.reject({
