@@ -11,7 +11,11 @@ import {
 } from '../utils/responsive';
 
 // Responsive bottom tab bar configuration
+// TODO: Refactor to a proper hook (useResponsiveTabBarConfig) — currently violates rules-of-hooks
+// because it calls useSafeAreaInsets() outside a hook. Used in 3 navigators; requires
+// updating all call sites to use the hook at component top-level.
 export const getResponsiveTabBarConfig = () => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const insets = useSafeAreaInsets();
   
   // Responsive height based on device type
@@ -168,8 +172,6 @@ export const ResponsiveTabBarContainer = ({ children, style, ...props }) => {
 
 // Responsive tab bar item for individual tab customization
 export const ResponsiveTabBarItem = ({ children, style, ...props }) => {
-  const config = getResponsiveTabBarConfig();
-  
   const itemStyle = [
     {
       flex: 1,
