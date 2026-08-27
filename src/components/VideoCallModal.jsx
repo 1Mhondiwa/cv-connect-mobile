@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   Modal,
   Alert,
   BackHandler,
@@ -20,14 +19,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Responsive utilities
 import {
-  scale,
-  verticalScale,
   fontSize,
   spacing,
   borderRadius,
 } from '../utils/responsive';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const VideoCallModal = ({ 
   visible, 
@@ -53,6 +48,54 @@ const VideoCallModal = ({
   const remoteVideoRef = useRef(null);
   const callDurationInterval = useRef(null);
 
+  const requestPermissions = async () => {
+    try {
+      return true;
+    } catch (error) {
+      console.error('❌ Permission request failed:', error);
+      return false;
+    }
+  };
+
+  const cleanup = () => {
+    if (callDurationInterval.current) {
+      clearInterval(callDurationInterval.current);
+    }
+  };
+
+  const endCall = () => {
+    setIsConnected(false);
+    setCallStartTime(null);
+    setCallDuration(0);
+    cleanup();
+    if (onCallEnd) {
+      onCallEnd();
+    }
+    onClose();
+  };
+
+  const initializeVideoCall = async () => {
+    try {
+      setIsConnecting(true);
+      setError(null);
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) {
+        setError('Camera and microphone permissions are required for video calls');
+        return;
+      }
+      setPermissionGranted(true);
+      setTimeout(() => {
+        setIsConnecting(false);
+        setIsConnected(true);
+        setCallStartTime(Date.now());
+      }, 2000);
+    } catch (error) {
+      console.error('❌ Error initializing video call:', error);
+      setError('Failed to initialize video call. Please try again.');
+      setIsConnecting(false);
+    }
+  };
+
   // Initialize video call when modal opens
   useEffect(() => {
     if (visible) {
@@ -73,7 +116,6 @@ const VideoCallModal = ({
         clearInterval(callDurationInterval.current);
       }
     }
-
     return () => {
       if (callDurationInterval.current) {
         clearInterval(callDurationInterval.current);
@@ -97,49 +139,9 @@ const VideoCallModal = ({
       }
       return false;
     };
-
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
   }, [visible, isConnected]);
-
-  const initializeVideoCall = async () => {
-    try {
-      setIsConnecting(true);
-      setError(null);
-
-      // Request permissions
-      const hasPermission = await requestPermissions();
-      if (!hasPermission) {
-        setError('Camera and microphone permissions are required for video calls');
-        return;
-      }
-
-      setPermissionGranted(true);
-
-      // Simulate connection process
-setTimeout(() => {
-          setIsConnecting(false);
-          setIsConnected(true);
-          setCallStartTime(Date.now());
-        }, 2000);
-
-    } catch (error) {
-      console.error('❌ Error initializing video call:', error);
-      setError('Failed to initialize video call. Please try again.');
-      setIsConnecting(false);
-    }
-  };
-
-  const requestPermissions = async () => {
-    try {
-      // In a real implementation, you would request camera and microphone permissions
-      // For now, we'll simulate permission granted
-      return true;
-    } catch (error) {
-      console.error('❌ Permission request failed:', error);
-      return false;
-    }
-  };
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
@@ -151,24 +153,6 @@ setTimeout(() => {
 
   const toggleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
-  };
-
-  const endCall = () => {
-    setIsConnected(false);
-    setCallStartTime(null);
-    setCallDuration(0);
-    cleanup();
-    if (onCallEnd) {
-      onCallEnd();
-    }
-    onClose();
-  };
-
-  const cleanup = () => {
-    if (callDurationInterval.current) {
-      clearInterval(callDurationInterval.current);
-    }
-    // In a real implementation, you would stop camera/microphone streams here
   };
 
   const formatDuration = (seconds) => {

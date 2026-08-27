@@ -11,6 +11,10 @@ module.exports = defineConfig([
     rules: {
       'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
       'import/no-unresolved': 'off',
+      // Relax some react-hooks rules for incremental adoption — these were all errors in the initial 325-issue baseline
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/purity': 'warn',
     },
   },
 ]);

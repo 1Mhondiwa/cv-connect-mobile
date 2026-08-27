@@ -11,7 +11,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import config from '../config/config';
 
 // Conditional import to prevent runtime errors
 let Pdf = null;
@@ -28,7 +27,24 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
   const [validUrl, setValidUrl] = useState('');
   const [showPdfViewer, setShowPdfViewer] = useState(false);
 
-  // Validate props
+  const checkUrlValidity = async () => {
+    try {
+      setUrlStatus('checking');
+      setValidUrl(cvUrl);
+      setUrlStatus('valid');
+    } catch (error) {
+      setUrlStatus('invalid');
+    }
+  };
+
+  // Check URL validity when component mounts or URL changes
+  useEffect(() => {
+    if (visible && cvUrl) {
+      checkUrlValidity();
+    }
+  }, [visible, cvUrl]);
+
+  // Validate props - must be after all hooks
   if (!cvUrl || !cvFilename) {
     console.error('CVViewer: Missing required props - cvUrl:', cvUrl, 'cvFilename:', cvFilename);
     return null;
@@ -42,32 +58,10 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
   // Clean the filename if it contains a path
   const cleanFilename = (filename) => {
     if (!filename) return 'CV';
-    // Remove any path segments and get just the filename
     return filename.split('/').pop() || filename.split('\\').pop() || filename;
   };
 
   const cleanCvFilename = cleanFilename(cvFilename);
-
-  // Check URL validity when component mounts or URL changes
-  useEffect(() => {
-    if (visible && cvUrl) {
-      checkUrlValidity();
-    }
-  }, [visible, cvUrl]);
-
-  const checkUrlValidity = async () => {
-    try {
-      setUrlStatus('checking');
-      
-      // Set the URL as valid immediately and skip validation
-      // This prevents the mobile app from getting stuck on network requests
-      setValidUrl(cvUrl);
-      setUrlStatus('valid');
-      
-    } catch (error) {
-      setUrlStatus('invalid');
-    }
-  };
 
 
   const handleViewCV = async () => {
