@@ -6,10 +6,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { 
-  getResponsiveTabBarStyle, 
-  getResponsiveTabBarLabelStyle,
-  getResponsiveTabBarIconStyle,
-  getResponsiveTabBarConfig
+  useResponsiveTabBarStyle, 
+  useResponsiveTabBarLabelStyle,
+  useResponsiveTabBarConfig
 } from '../components/ResponsiveBottomTabBar';
 
 // Import screens
@@ -154,6 +153,9 @@ const ProfileStack = () => {
 const FreelancerTabNavigator = () => {
   const theme = useTheme();
   const { unreadCount } = useSelector((state) => state.messages);
+  const tabBarConfig = useResponsiveTabBarConfig();
+  const tabBarStyle = useResponsiveTabBarStyle();
+  const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
 
   // Custom tab bar icon with badge
   const renderTabBarIcon = ({ route, focused, color, size }) => {
@@ -169,9 +171,7 @@ const FreelancerTabNavigator = () => {
       iconName = focused ? 'message' : 'message-outline';
     }
 
-    // Use responsive icon size
-    const config = getResponsiveTabBarConfig();
-    const iconSize = config.iconSize;
+    const iconSize = tabBarConfig.iconSize;
 
     if (route.name === 'Messages' && unreadCount > 0) {
       return (
@@ -195,8 +195,8 @@ const FreelancerTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => renderTabBarIcon({ route, focused, color, size }),
         tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#8B4513',
-        tabBarStyle: getResponsiveTabBarStyle(),
-        tabBarLabelStyle: getResponsiveTabBarLabelStyle(),
+        tabBarStyle: tabBarStyle,
+        tabBarLabelStyle: tabBarLabelStyle,
         headerStyle: {
           backgroundColor: '#FF6B35',
           elevation: 0,
