@@ -5,10 +5,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { 
-  getResponsiveTabBarStyle, 
-  getResponsiveTabBarLabelStyle,
-  getResponsiveTabBarIconStyle,
-  getResponsiveTabBarConfig
+  useResponsiveTabBarStyle, 
+  useResponsiveTabBarLabelStyle,
+  useResponsiveTabBarConfig
 } from '../components/ResponsiveBottomTabBar';
 
 // Associate Screens
@@ -42,6 +41,9 @@ const MessagesStack = () => (
 
 const AssociateTabNavigator = () => {
   const { unreadCount } = useSelector((state) => state.messages);
+  const tabBarConfig = useResponsiveTabBarConfig();
+  const tabBarStyle = useResponsiveTabBarStyle();
+  const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
 
   // Custom tab bar icon with badge
   const renderTabBarIcon = ({ route, focused, color, size }) => {
@@ -59,9 +61,7 @@ const AssociateTabNavigator = () => {
       iconName = focused ? 'account' : 'account-outline';
     }
 
-    // Use responsive icon size
-    const config = getResponsiveTabBarConfig();
-    const iconSize = config.iconSize;
+    const iconSize = tabBarConfig.iconSize;
 
     if (route.name === 'Messages' && unreadCount > 0) {
       return (
@@ -85,8 +85,8 @@ const AssociateTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => renderTabBarIcon({ route, focused, color, size }),
         tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#8B4513',
-        tabBarStyle: getResponsiveTabBarStyle(),
-        tabBarLabelStyle: getResponsiveTabBarLabelStyle(),
+        tabBarStyle: tabBarStyle,
+        tabBarLabelStyle: tabBarLabelStyle,
         headerShown: false,
       })}
     >

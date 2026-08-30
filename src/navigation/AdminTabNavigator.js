@@ -4,10 +4,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from 'react-native-paper';
 import { Platform } from 'react-native';
 import { 
-  getResponsiveTabBarStyle, 
-  getResponsiveTabBarLabelStyle,
-  getResponsiveTabBarIconStyle,
-  getResponsiveTabBarConfig
+  useResponsiveTabBarStyle, 
+  useResponsiveTabBarLabelStyle,
+  useResponsiveTabBarConfig
 } from '../components/ResponsiveBottomTabBar';
 
 // Admin Screens
@@ -19,6 +18,9 @@ const Tab = createBottomTabNavigator();
 
 const AdminTabNavigator = () => {
   const theme = useTheme();
+  const tabBarConfig = useResponsiveTabBarConfig();
+  const tabBarStyle = useResponsiveTabBarStyle();
+  const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
 
   return (
     <Tab.Navigator
@@ -34,16 +36,14 @@ const AdminTabNavigator = () => {
             iconName = focused ? 'account' : 'account-outline';
           }
 
-          // Use responsive icon size
-          const config = getResponsiveTabBarConfig();
-          const iconSize = config.iconSize;
+          const iconSize = tabBarConfig.iconSize;
 
           return <MaterialCommunityIcons name={iconName} size={iconSize} color={color} />;
         },
         tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#8B4513',
-        tabBarStyle: getResponsiveTabBarStyle(),
-        tabBarLabelStyle: getResponsiveTabBarLabelStyle(),
+        tabBarStyle: tabBarStyle,
+        tabBarLabelStyle: tabBarLabelStyle,
         headerShown: false,
       })}
     >

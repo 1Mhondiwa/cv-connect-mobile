@@ -10,15 +10,9 @@ import {
   isSmallDevice 
 } from '../utils/responsive';
 
-// Responsive bottom tab bar configuration
-// TODO: Refactor to a proper hook (useResponsiveTabBarConfig) — currently violates rules-of-hooks
-// because it calls useSafeAreaInsets() outside a hook. Used in 3 navigators; requires
-// updating all call sites to use the hook at component top-level.
-export const getResponsiveTabBarConfig = () => {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const insets = useSafeAreaInsets();
-  
-  // Responsive height based on device type
+// Responsive bottom tab bar configuration — pure function (no hooks, safe for non-component usage)
+// Pass `insets` from `useSafeAreaInsets()` when called inside a component.
+export const getResponsiveTabBarConfig = (insets = { bottom: 0 }) => {
   const getTabBarHeight = () => {
     if (isTablet()) {
       return Platform.OS === 'ios' ? 90 : 80;
@@ -29,7 +23,6 @@ export const getResponsiveTabBarConfig = () => {
     return Platform.OS === 'ios' ? 90 : 80;
   };
 
-  // Responsive padding based on device type
   const getTabBarPadding = () => {
     if (isTablet()) {
       return {
@@ -52,29 +45,26 @@ export const getResponsiveTabBarConfig = () => {
     };
   };
 
-  // Responsive icon size based on device type
   const getIconSize = () => {
     if (isTablet()) {
-      return iconSize.lg; // 32px on tablets
+      return iconSize.lg;
     }
     if (isSmallDevice()) {
-      return iconSize.sm; // 20px on small devices
+      return iconSize.sm;
     }
-    return iconSize.md; // 24px on standard devices
+    return iconSize.md;
   };
 
-  // Responsive label font size based on device type
   const getLabelFontSize = () => {
     if (isTablet()) {
-      return fontSize.sm; // 12px on tablets
+      return fontSize.sm;
     }
     if (isSmallDevice()) {
-      return fontSize.xs; // 10px on small devices
+      return fontSize.xs;
     }
-    return fontSize.sm; // 12px on standard devices
+    return fontSize.sm;
   };
 
-  // Responsive label margin based on device type
   const getLabelMargin = () => {
     if (isTablet()) {
       return 4;
@@ -94,10 +84,15 @@ export const getResponsiveTabBarConfig = () => {
   };
 };
 
-// Responsive tab bar style generator
-export const getResponsiveTabBarStyle = () => {
-  const config = getResponsiveTabBarConfig();
-  
+// Hook version — use inside components to get insets-aware config
+export const useResponsiveTabBarConfig = () => {
+  const insets = useSafeAreaInsets();
+  return getResponsiveTabBarConfig(insets);
+};
+
+// Responsive tab bar style generator — pure version
+export const getResponsiveTabBarStyle = (insets) => {
+  const config = getResponsiveTabBarConfig(insets);
   return {
     backgroundColor: '#FFFFFF',
     borderTopColor: '#E0E0E0',
@@ -110,36 +105,75 @@ export const getResponsiveTabBarStyle = () => {
     },
     shadowOpacity: responsive.ifTablet(0.15, 0.1),
     shadowRadius: responsive.ifTablet(6, 4),
-    // Rounded corners on all sides
     borderTopLeftRadius: responsive.ifTablet(20, 16),
     borderTopRightRadius: responsive.ifTablet(20, 16),
     borderBottomLeftRadius: responsive.ifTablet(20, 16),
     borderBottomRightRadius: responsive.ifTablet(20, 16),
-    // No top border when using rounded corners
     borderTopWidth: 0,
-    // Add a subtle border around all sides for better definition
     borderWidth: responsive.ifTablet(2, 1),
     borderColor: '#E0E0E0',
     ...config.padding,
   };
 };
 
-// Responsive tab bar label style generator
-export const getResponsiveTabBarLabelStyle = () => {
-  const config = getResponsiveTabBarConfig();
-  
+export const useResponsiveTabBarStyle = () => {
+  const config = useResponsiveTabBarConfig();
+  return {
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E0E0E0',
+    height: config.height,
+    elevation: responsive.ifTablet(12, 8),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: responsive.ifTablet(-3, -2),
+    },
+    shadowOpacity: responsive.ifTablet(0.15, 0.1),
+    shadowRadius: responsive.ifTablet(6, 4),
+    borderTopLeftRadius: responsive.ifTablet(20, 16),
+    borderTopRightRadius: responsive.ifTablet(20, 16),
+    borderBottomLeftRadius: responsive.ifTablet(20, 16),
+    borderBottomRightRadius: responsive.ifTablet(20, 16),
+    borderTopWidth: 0,
+    borderWidth: responsive.ifTablet(2, 1),
+    borderColor: '#E0E0E0',
+    ...config.padding,
+  };
+};
+
+// Responsive tab bar label style generator — pure + hook
+export const getResponsiveTabBarLabelStyle = (insets) => {
+  const config = getResponsiveTabBarConfig(insets);
   return {
     fontSize: config.labelFontSize,
     fontWeight: responsive.ifTablet('600', '500'),
     marginTop: config.labelMargin,
-    color: '#8B4513', // Default inactive color
+    color: '#8B4513',
   };
 };
 
-// Responsive tab bar icon style generator
-export const getResponsiveTabBarIconStyle = () => {
-  const config = getResponsiveTabBarConfig();
-  
+export const useResponsiveTabBarLabelStyle = () => {
+  const config = useResponsiveTabBarConfig();
+  return {
+    fontSize: config.labelFontSize,
+    fontWeight: responsive.ifTablet('600', '500'),
+    marginTop: config.labelMargin,
+    color: '#8B4513',
+  };
+};
+
+// Responsive tab bar icon style generator — pure + hook
+export const getResponsiveTabBarIconStyle = (insets) => {
+  const config = getResponsiveTabBarConfig(insets);
+  return {
+    width: config.iconSize,
+    height: config.iconSize,
+    marginBottom: responsive.ifTablet(4, 2),
+  };
+};
+
+export const useResponsiveTabBarIconStyle = () => {
+  const config = useResponsiveTabBarConfig();
   return {
     width: config.iconSize,
     height: config.iconSize,
@@ -149,20 +183,17 @@ export const getResponsiveTabBarIconStyle = () => {
 
 // Responsive tab bar container for additional customization
 export const ResponsiveTabBarContainer = ({ children, style, ...props }) => {
-  const config = getResponsiveTabBarConfig();
-  
+  const config = useResponsiveTabBarConfig();
   const containerStyle = [
     {
       minHeight: config.height,
       backgroundColor: '#FFFFFF',
-      // Rounded corners for custom tab bar containers
       borderRadius: responsive.ifTablet(20, 16),
       borderWidth: responsive.ifTablet(2, 1),
       borderColor: '#E0E0E0',
     },
     style,
   ];
-
   return (
     <View style={containerStyle} {...props}>
       {children}
@@ -192,9 +223,13 @@ export const ResponsiveTabBarItem = ({ children, style, ...props }) => {
 // Export all utilities for use in navigation files
 export default {
   getResponsiveTabBarConfig,
+  useResponsiveTabBarConfig,
   getResponsiveTabBarStyle,
+  useResponsiveTabBarStyle,
   getResponsiveTabBarLabelStyle,
+  useResponsiveTabBarLabelStyle,
   getResponsiveTabBarIconStyle,
+  useResponsiveTabBarIconStyle,
   ResponsiveTabBarContainer,
   ResponsiveTabBarItem,
 };
