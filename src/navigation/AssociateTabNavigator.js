@@ -46,7 +46,7 @@ const AssociateTabNavigator = () => {
   const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
 
   // Custom tab bar icon with badge
-  const renderTabBarIcon = ({ route, focused, color, size }) => {
+  const renderTabBarIcon = ({ route, focused, color, _size }) => {
     let iconName;
 
     if (route.name === 'Dashboard') {
