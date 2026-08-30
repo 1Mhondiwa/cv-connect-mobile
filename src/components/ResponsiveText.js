@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
-import { responsive, fontSize, isTablet, isSmallDevice } from '../utils/responsive';
+import { fontSize, isTablet, isSmallDevice } from '../utils/responsive';
 
 const ResponsiveText = ({
   children,
