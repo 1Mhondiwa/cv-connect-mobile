@@ -31,14 +31,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Import responsive utilities
 import { 
   scale, 
-  verticalScale, 
   fontSize, 
   spacing, 
   borderRadius, 
-  responsive,
-  isTablet,
-  isSmallDevice,
-  isLargeDevice
+  responsive
 } from '../../utils/responsive';
 
 // Helper function to get activity color based on status
