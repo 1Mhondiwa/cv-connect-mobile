@@ -36,7 +36,7 @@ const ResponsiveGrid = ({
   ];
 
   // Clone children and add responsive styles
-  const responsiveChildren = React.Children.map(children, (child, index) => {
+  const responsiveChildren = React.Children.map(children, (child, _index) => {
     if (React.isValidElement(child)) {
       return React.cloneElement(child, {
         style: [

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
-import { responsive, fontSize, spacing, borderRadius, inputDimensions } from '../utils/responsive';
+import { fontSize, spacing, borderRadius, inputDimensions } from '../utils/responsive';
 
 const ResponsiveInput = ({
   label,

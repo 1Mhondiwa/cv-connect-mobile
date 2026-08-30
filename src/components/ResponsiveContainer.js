@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { responsive, isTablet } from '../utils/responsive';
+import { responsive } from '../utils/responsive';
 
 const ResponsiveContainer = ({
   children,

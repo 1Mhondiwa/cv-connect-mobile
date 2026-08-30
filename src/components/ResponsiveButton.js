@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { responsive, fontSize, spacing, borderRadius, buttonSize } from '../utils/responsive';
+import { fontSize, borderRadius, buttonSize } from '../utils/responsive';
 
 const ResponsiveButton = ({
   children,
