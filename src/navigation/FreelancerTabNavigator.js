@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
@@ -151,14 +150,13 @@ const ProfileStack = () => {
 };
 
 const FreelancerTabNavigator = () => {
-  const theme = useTheme();
   const { unreadCount } = useSelector((state) => state.messages);
   const tabBarConfig = useResponsiveTabBarConfig();
   const tabBarStyle = useResponsiveTabBarStyle();
   const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
 
   // Custom tab bar icon with badge
-  const renderTabBarIcon = ({ route, focused, color, size }) => {
+  const renderTabBarIcon = ({ route, focused, color, _size }) => {
     let iconName;
 
     if (route.name === 'Dashboard') {
@@ -242,7 +240,7 @@ const FreelancerTabNavigator = () => {
           headerShown: false, // Hide header since ProfileStack has its own
         }}
         listeners={({ navigation }) => ({
-          tabPress: (e) => {
+          tabPress: (_e) => {
             // Reset the ProfileStack to show ProfileMain when Profile tab is pressed
             navigation.navigate('Profile', { screen: 'ProfileMain' });
           },

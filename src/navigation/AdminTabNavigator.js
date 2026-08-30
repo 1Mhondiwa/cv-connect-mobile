@@ -1,8 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from 'react-native-paper';
-import { Platform } from 'react-native';
 import { 
   useResponsiveTabBarStyle, 
   useResponsiveTabBarLabelStyle,
@@ -17,7 +15,6 @@ import AdminProfileScreen from '../screens/admin/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 const AdminTabNavigator = () => {
-  const theme = useTheme();
   const tabBarConfig = useResponsiveTabBarConfig();
   const tabBarStyle = useResponsiveTabBarStyle();
   const tabBarLabelStyle = useResponsiveTabBarLabelStyle();
@@ -25,7 +22,7 @@ const AdminTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color, _size }) => {
           let iconName;
 
           if (route.name === 'Dashboard') {
