@@ -20,7 +20,7 @@ try {
   if (PdfModule && typeof PdfModule.default === 'function') {
     Pdf = PdfModule.default;
   }
-} catch (error) {}
+} catch (_error) {}
 
 const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
   const [urlStatus, setUrlStatus] = useState('checking');
@@ -32,7 +32,7 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
       setUrlStatus('checking');
       setValidUrl(cvUrl);
       setUrlStatus('valid');
-    } catch (error) {
+    } catch (_error) {
       setUrlStatus('invalid');
     }
   };
@@ -210,16 +210,16 @@ const CVViewer = ({ visible, onClose, cvUrl, cvFilename, cvData }) => {
               <Pdf
                 source={{ uri: validUrl || cvUrl }}
                 style={styles.pdf}
-                onLoadComplete={(numberOfPages, filePath) => {
+                onLoadComplete={(_numberOfPages, _filePath) => {
                 }}
-                onPageChanged={(page, numberOfPages) => {
+                onPageChanged={(_page, _numberOfPages) => {
                 }}
                 onError={(error) => {
                   console.error('PDF error:', error);
                   Alert.alert('PDF Error', 'Failed to load PDF. Please try again.');
                   setShowPdfViewer(false);
                 }}
-                onPressLink={(uri) => {
+                onPressLink={(_uri) => {
                 }}
               />
             ) : (
