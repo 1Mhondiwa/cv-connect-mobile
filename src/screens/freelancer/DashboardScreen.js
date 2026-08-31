@@ -65,6 +65,82 @@ const DashboardScreen = ({ navigation }) => {
 
 
 
+  const setupRealTimeUpdates = () => {
+    // Connect to WebSocket if not already connected
+    if (!socketService.getConnectionStatus()) {
+      socketService.connect();
+    }
+
+    // Join user room for notifications
+    if (user?.user_id) {
+      socketService.joinUserRoom(user.user_id);
+    }
+
+    // Register notification handler for interview notifications
+    const notificationHandlerId = socketService.onNotification((notificationData) => {
+      if (notificationData.type === 'interview_notification') {
+        // Add the new notification to Redux store
+        dispatch(addNotification(notificationData.notification));
+      }
+      
+      // Refresh notifications to get the latest from backend
+      fetchNotificationData();
+    });
+
+    // Store handler IDs for cleanup (you might want to store these in component state)
+    return { notificationHandlerId };
+  };
+
+  const fetchNotificationData = async () => {
+    try {
+      await dispatch(fetchNotifications({ limit: 20 })).unwrap();
+    } catch (error) {
+      console.error('❌ Failed to fetch notifications:', error);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      // Dashboard data is loaded via Redux store
+      // The component will automatically re-render when the store updates
+      
+      // Track mobile dashboard visit
+      if (user?.user_id) {
+        await VisitorTrackingService.trackDashboard(user.user_id);
+      }
+    } catch (error) {
+      // Error loading dashboard data
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
+  const fetchActivity = async () => {
+    try {
+      // First try to get activities from the dedicated endpoint
+      if (profileAPI && typeof profileAPI.getActivity === 'function') {
+        const response = await profileAPI.getActivity();
+        
+        if (response.data.success) {
+          setActivities(response.data.activities || []);
+          setActivityLoading(false);
+          return;
+        }
+      }
+      
+      // Fallback: use activities from dashboard data
+      if (dashboardData?.recent_activity) {
+        setActivities(dashboardData.recent_activity);
+      } else {
+        setActivities([]);
+      }
+    } catch (error) {
+      console.error('❌ Error in fetchActivity:', error);
+      setActivities([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
     // Delay fetchActivity to ensure dashboard data is loaded first
@@ -126,40 +202,6 @@ const DashboardScreen = ({ navigation }) => {
       setActivities(dashboardData.recent_activity);
     }
   }, [dashboardData?.recent_activity, activities.length]);
-  
-  const setupRealTimeUpdates = () => {
-    // Connect to WebSocket if not already connected
-    if (!socketService.getConnectionStatus()) {
-      socketService.connect();
-    }
-
-    // Join user room for notifications
-    if (user?.user_id) {
-      socketService.joinUserRoom(user.user_id);
-    }
-
-    // Register notification handler for interview notifications
-    const notificationHandlerId = socketService.onNotification((notificationData) => {
-      if (notificationData.type === 'interview_notification') {
-        // Add the new notification to Redux store
-        dispatch(addNotification(notificationData.notification));
-      }
-      
-      // Refresh notifications to get the latest from backend
-      fetchNotificationData();
-    });
-
-    // Store handler IDs for cleanup (you might want to store these in component state)
-    return { notificationHandlerId };
-  };
-
-  const fetchNotificationData = async () => {
-    try {
-      await dispatch(fetchNotifications({ limit: 20 })).unwrap();
-    } catch (error) {
-      console.error('❌ Failed to fetch notifications:', error);
-    }
-  };
 
   const handleNotificationPress = async (notification) => {
     try {
@@ -235,50 +277,6 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   
-
-  const loadDashboardData = async () => {
-    try {
-      // Dashboard data is loaded via Redux store
-      // The component will automatically re-render when the store updates
-      
-      // Track mobile dashboard visit
-      if (user?.user_id) {
-        await VisitorTrackingService.trackDashboard(user.user_id);
-      }
-    } catch (error) {
-      // Error loading dashboard data
-      console.error('Error loading dashboard data:', error);
-    }
-  };
-
-
-
-  const fetchActivity = async () => {
-    try {
-      // First try to get activities from the dedicated endpoint
-      if (profileAPI && typeof profileAPI.getActivity === 'function') {
-        const response = await profileAPI.getActivity();
-        
-        if (response.data.success) {
-          setActivities(response.data.activities || []);
-          setActivityLoading(false);
-          return;
-        }
-      }
-      
-      // Fallback: use activities from dashboard data
-      if (dashboardData?.recent_activity) {
-        setActivities(dashboardData.recent_activity);
-      } else {
-        setActivities([]);
-      }
-    } catch (error) {
-      console.error('❌ Error in fetchActivity:', error);
-      setActivities([]);
-    } finally {
-      setActivityLoading(false);
-    }
-  };
 
   const refreshActivities = async () => {
     try {
