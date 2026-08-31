@@ -53,22 +53,14 @@ const getActivityColor = (status) => {
 
 const DashboardScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const { user, token } = useSelector((state) => state.auth);
-    const { dashboardData, profile, skills, isLoading } = useSelector((state) => state.freelancer);
-    const { notifications, unreadCount, isLoading: notificationsLoading } = useSelector((state) => state.notifications);
+    const { user } = useSelector((state) => state.auth);
+    const { dashboardData, profile, isLoading } = useSelector((state) => state.freelancer);
+    const { notifications } = useSelector((state) => state.notifications);
     // Local state for activities
   const [activities, setActivities] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [isRefreshingActivities, setIsRefreshingActivities] = useState(false);
   
-  // Local state for hiring data
-  const [hiringStats, setHiringStats] = useState(null);
-  const [hiringHistory, setHiringHistory] = useState([]);
-  const [hiringLoading, setHiringLoading] = useState(false);
-  
-  // Local state for countdown timer
-  const [currentTime, setCurrentTime] = useState(new Date());
-    
 
 
 
@@ -79,8 +71,6 @@ const DashboardScreen = ({ navigation }) => {
     setTimeout(() => {
       fetchActivity();
     }, 1000);
-    // Fetch hiring data
-    fetchHiringData();
     // Fetch notifications
     fetchNotificationData();
     setupRealTimeUpdates();
@@ -90,15 +80,6 @@ const DashboardScreen = ({ navigation }) => {
       // Note: WebSocket cleanup is handled by socketService
     };
   }, []); // Run only once on mount
-
-  // Real-time countdown timer for interviews
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // Update every minute
-
-    return () => clearInterval(timer);
-  }, []);
 
   // Periodic profile refresh for real-time updates (every 5 minutes)
   useEffect(() => {
@@ -130,7 +111,6 @@ const DashboardScreen = ({ navigation }) => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadDashboardData();
       fetchActivity();
-      fetchHiringData();
       // Refresh profile data to get latest completed jobs
       dispatch(getProfile());
       // Refresh notifications to get latest interview notifications
@@ -309,28 +289,6 @@ const DashboardScreen = ({ navigation }) => {
       // Don't show alert, just log the error
     } finally {
       setIsRefreshingActivities(false);
-    }
-  };
-
-  const fetchHiringData = async () => {
-    try {
-      setHiringLoading(true);
-      
-      // Fetch hiring statistics
-      const statsResponse = await profileAPI.getHiringStats();
-      if (statsResponse.data.success) {
-        setHiringStats(statsResponse.data.stats);
-      }
-      
-      // Fetch hiring history
-      const historyResponse = await profileAPI.getHiringHistory();
-      if (historyResponse.data.success) {
-        setHiringHistory(historyResponse.data.hiring_history);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching hiring data:', error);
-    } finally {
-      setHiringLoading(false);
     }
   };
 
