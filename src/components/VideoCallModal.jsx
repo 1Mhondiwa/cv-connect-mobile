@@ -27,7 +27,7 @@ import {
 const VideoCallModal = ({ 
   visible, 
   onClose, 
-  interviewId, 
+  interviewId: _interviewId, 
   interviewTitle, 
   isHost = false,
   onCallEnd 
@@ -41,11 +41,8 @@ const VideoCallModal = ({
   const [callDuration, setCallDuration] = useState(0);
   const [callStartTime, setCallStartTime] = useState(null);
   const [error, setError] = useState(null);
-  const [permissionGranted, setPermissionGranted] = useState(false);
 
   // Refs
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
   const callDurationInterval = useRef(null);
 
   const requestPermissions = async () => {
@@ -83,7 +80,6 @@ const VideoCallModal = ({
         setError('Camera and microphone permissions are required for video calls');
         return;
       }
-      setPermissionGranted(true);
       setTimeout(() => {
         setIsConnecting(false);
         setIsConnected(true);
