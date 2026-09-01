@@ -333,39 +333,32 @@ const VideoCallScreen = ({ route, navigation }) => {
 
   const toggleScreenSharing = async () => {
     try {
-      // Check if ScreenCapture is available
-      if (!ScreenCapture || !ScreenCapture.startScreenCaptureAsync) {
+      // expo-screen-capture prevents screenshots/recording — the privacy
+      // control available on this API level. Screen sharing itself is not
+      // implemented in the current WebRTC service.
+      if (!ScreenCapture || !ScreenCapture.preventScreenCaptureAsync) {
         Alert.alert(
-          'Screen Sharing Unavailable',
-          'Screen sharing requires expo-screen-capture package. Please install it first.',
+          'Screen Protection Unavailable',
+          'This feature requires the expo-screen-capture package.',
           [{ text: 'OK' }]
         );
         return;
       }
 
       if (isScreenSharing) {
-        // Stop screen sharing
-        await ScreenCapture.stopScreenCaptureAsync();
+        // Re-allow capture
+        await ScreenCapture.allowScreenCaptureAsync();
         setIsScreenSharing(false);
       } else {
-        // Start screen sharing
-        const hasPermission = await ScreenCapture.requestPermissionsAsync();
-        if (hasPermission.granted) {
-          await ScreenCapture.startScreenCaptureAsync();
-          setIsScreenSharing(true);
-        } else {
-          Alert.alert(
-            'Permission Required',
-            'Screen recording permission is required for screen sharing.',
-            [{ text: 'OK' }]
-          );
-        }
+        // Prevent screenshots/recording of the interview
+        await ScreenCapture.preventScreenCaptureAsync();
+        setIsScreenSharing(true);
       }
     } catch (err) {
-      console.error('❌ Error toggling screen sharing:', err);
+      console.error('❌ Error toggling screen protection:', err);
       Alert.alert(
-        'Screen Sharing Error',
-        'Failed to start/stop screen sharing. Please try again.',
+        'Screen Protection Error',
+        'Failed to toggle screen protection. Please try again.',
         [{ text: 'OK' }]
       );
     }
@@ -402,13 +395,13 @@ const VideoCallScreen = ({ route, navigation }) => {
     // Disconnect from signaling server
     signalingService.disconnect();
 
-    // Stop screen sharing if active
-    if (isScreenSharing && ScreenCapture && ScreenCapture.stopScreenCaptureAsync) {
+    // Re-allow screen capture if we prevented it
+    if (isScreenSharing && ScreenCapture && ScreenCapture.allowScreenCaptureAsync) {
       try {
-        await ScreenCapture.stopScreenCaptureAsync();
+        await ScreenCapture.allowScreenCaptureAsync();
         setIsScreenSharing(false);
       } catch (err) {
-        console.error('❌ Error stopping screen sharing:', err);
+        console.error('❌ Error stopping screen protection:', err);
       }
     }
 
@@ -492,17 +485,17 @@ const VideoCallScreen = ({ route, navigation }) => {
                 }}
                activeOpacity={0.8}
              >
-               <View style={styles.remoteVideo}>
-                 {isScreenSharing ? (
-                   <View style={styles.screenShareContainer}>
-                     <MaterialCommunityIcons
-                       name="monitor"
-                       size={60}
-                       color="#FFF"
-                     />
-                     <Text style={styles.screenShareText}>Screen Sharing</Text>
-                   </View>
-                 ) : remoteStream ? (
+                <View style={styles.remoteVideo}>
+                  {isScreenSharing ? (
+                    <View style={styles.screenShareContainer}>
+                      <MaterialCommunityIcons
+                        name="shield-check"
+                        size={60}
+                        color="#FFF"
+                      />
+                      <Text style={styles.screenShareText}>Screen Protected</Text>
+                    </View>
+                  ) : remoteStream ? (
                    <View style={styles.remoteVideoPlaceholder}>
                      <MaterialCommunityIcons
                        name="account-tie"
