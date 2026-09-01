@@ -2273,29 +2273,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  profileImage: {
-    marginRight: 16,
-  },
-  uploadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadingText: {
-    color: '#fff',
-    fontSize: 12,
-  },
   headerText: {
     flex: 1,
-  },
-  editButton: {
-    marginLeft: 'auto',
   },
   editButtonContainer: {
     marginLeft: 'auto',
@@ -2315,11 +2294,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   welcomeText: {
     fontWeight: 'bold',
@@ -2475,14 +2449,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#6B7280',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
   cancelButtonText: {
     color: '#fff',
     fontSize: 14,
@@ -2567,12 +2533,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     textAlign: 'center',
-  },
-  uploadHint: {
-    fontSize: 10,
-    color: '#8B4513',
-    textAlign: 'center',
-    marginTop: 4,
   },
   cvButtonsContainer: {
     flexDirection: 'row',
@@ -2660,17 +2620,6 @@ const styles = StyleSheet.create({
   },
   skillLevelContainer: {
     marginTop: 8,
-  },
-  skillLevelLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  skillLevelButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
   },
   levelChip: {
     borderColor: '#E0E0E0',
@@ -2936,22 +2885,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   // Add form styles
-  addFormHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6B35',
-  },
-  addFormTitle: {
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
-  },
   // Skills form styles
   skillFormContainer: {
     gap: 16,
@@ -3114,42 +3047,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  enhancedFormInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
-  },
   phoneInputContainer: {
     flexDirection: 'row',
     gap: 12,
   },
   phoneInput: {
     flex: 1,
-  },
-  enhancedTextArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  enhancedLevelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF',
-    marginRight: 8,
-    marginBottom: 8,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  selectedEnhancedLevelButton: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
   },
   enhancedLevelButtonText: {
     fontSize: 14,
@@ -3160,24 +3063,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  enhancedContactTypeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#FF6B35',
-    backgroundColor: '#FFFFFF',
-    marginRight: 12,
-    marginBottom: 8,
-    minWidth: 120,
-    justifyContent: 'center',
-    gap: 8,
-  },
-  selectedEnhancedContactTypeButton: {
-    backgroundColor: '#FF6B35',
-  },
   enhancedContactTypeButtonText: {
     fontSize: 14,
     color: '#FF6B35',
@@ -3186,27 +3071,6 @@ const styles = StyleSheet.create({
   selectedEnhancedContactTypeButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
-  },
-  enhancedAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: '#FF6B35',
-    gap: 12,
-    marginTop: 8,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  enhancedAddButtonDisabled: {
-    backgroundColor: '#E0E0E0',
-    elevation: 0,
-    shadowOpacity: 0,
   },
   enhancedAddButtonText: {
     color: '#FFFFFF',
