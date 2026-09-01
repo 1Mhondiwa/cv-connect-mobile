@@ -177,7 +177,7 @@ const SearchScreen = ({ navigation }) => {
           </Text>
           
           <Text variant="bodyMedium" style={styles.cardDescription}>
-            Job search features are being developed. You'll be able to:
+              Job search features are being developed. You&apos;ll be able to:
           </Text>
 
           <View style={styles.featuresList}>

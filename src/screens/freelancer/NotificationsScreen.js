@@ -175,7 +175,7 @@ const NotificationsScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="bell-outline" size={64} color="#CCC" />
             <Text style={styles.emptyTitle}>No Notifications</Text>
             <Text style={styles.emptySubtitle}>
-              You're all caught up! New notifications will appear here.
+              You&apos;re all caught up! New notifications will appear here.
             </Text>
           </View>
         ) : (

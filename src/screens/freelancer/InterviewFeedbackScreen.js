@@ -264,7 +264,7 @@ const InterviewFeedbackScreen = ({ navigation, route }) => {
             <MaterialCommunityIcons name="clock-outline" size={48} color="#ccc" />
             <Text style={styles.pendingTitle}>Feedback Pending</Text>
             <Text style={styles.pendingDescription}>
-              The associate hasn't submitted feedback for this interview yet.
+              The associate hasn&apos;t submitted feedback for this interview yet.
             </Text>
           </View>
         )}

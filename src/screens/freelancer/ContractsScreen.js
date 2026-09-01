@@ -259,7 +259,7 @@ const ContractsScreen = ({ navigation }) => {
         <MaterialCommunityIcons name="file-document-outline" size={64} color="#CCC" />
         <Text style={styles.emptyTitle}>No Contracts Yet</Text>
         <Text style={styles.emptySubtitle}>
-          You haven't been hired for any projects yet. Keep building your profile and applying for opportunities!
+          You haven&apos;t been hired for any projects yet. Keep building your profile and applying for opportunities!
         </Text>
         <TouchableOpacity style={styles.refreshButton} onPress={fetchContracts}>
           <Text style={styles.refreshButtonText}>Refresh</Text>

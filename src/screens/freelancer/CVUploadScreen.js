@@ -143,7 +143,7 @@ const CVUploadScreen = ({ navigation }) => {
               Welcome to CV Connect!
             </Text>
             <Text variant="bodyMedium" style={styles.subtitleText}>
-              Let's get you started by uploading your CV
+              Let&apos;s get you started by uploading your CV
             </Text>
           </View>
 

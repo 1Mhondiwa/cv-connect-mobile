@@ -167,7 +167,7 @@ const AssociateRequestScreen = () => {
             </TouchableOpacity>
             <Text style={styles.title}>Become an Associate</Text>
             <Text style={styles.subtitle}>
-              Submit your company's application to join CV-Connect as an associate
+              Submit your company&apos;s application to join CV-Connect as an associate
             </Text>
           </View>
 
