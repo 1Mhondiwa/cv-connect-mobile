@@ -1,30 +1,40 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Animated,
-  Dimensions,
   StatusBar,
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAnimatedValue } from '../utils/useAnimatedValue';
 
-const { width, height } = Dimensions.get('window');
-
-const SplashScreen = ({ navigation }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.3)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+const SplashScreen = ({ navigation: _navigation }) => {
+  const fadeAnim = useAnimatedValue(0);
+  const scaleAnim = useAnimatedValue(0.3);
+  const rotateAnim = useAnimatedValue(0);
+  const slideAnim = useAnimatedValue(50);
+  const pulseAnim = useAnimatedValue(1);
   const [logoError, setLogoError] = useState(false);
 
-  useEffect(() => {
-    // Start animations
-    startAnimations();
-  }, []);
+  const startPulseAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
 
   const startAnimations = () => {
     // Parallel animations
@@ -60,22 +70,11 @@ const SplashScreen = ({ navigation }) => {
     startPulseAnimation();
   };
 
-  const startPulseAnimation = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  };
+  useEffect(() => {
+    // Start animations
+    startAnimations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
