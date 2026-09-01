@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
   StatusBar,
   TouchableOpacity,
   Animated,
@@ -13,12 +12,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card, Button, Surface } from 'react-native-paper';
-
-const { width, height } = Dimensions.get('window');
+import { useAnimatedValue } from '../utils/useAnimatedValue';
 
 const LandingScreen = ({ navigation }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim = useAnimatedValue(0);
+  const slideAnim = useAnimatedValue(30);
   const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
@@ -35,7 +33,7 @@ const LandingScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
 
   return (
