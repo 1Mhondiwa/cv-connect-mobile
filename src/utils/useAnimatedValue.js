@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Animated } from 'react-native';
 
 /**
@@ -8,11 +8,11 @@ import { Animated } from 'react-native';
  * violates react-hooks/refs. This hook returns the value itself (not the ref
  * container), which is idiomatic for animation values because they are
  * mutable objects meant to be passed directly to Animated APIs and styles.
+ *
+ * Implemented with useState's lazy initializer, which runs exactly once and
+ * keeps the same instance across renders.
  */
 export function useAnimatedValue(initialValue) {
-  const valueRef = useRef(null);
-  if (valueRef.current === null) {
-    valueRef.current = new Animated.Value(initialValue);
-  }
-  return valueRef.current;
+  const [value] = useState(() => new Animated.Value(initialValue));
+  return value;
 }
