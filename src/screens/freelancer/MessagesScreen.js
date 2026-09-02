@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, Card, Button, IconButton, Surface, useTheme, Avatar, Divider, Badge } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchConversations, fetchUnreadCount } from '../../store/slices/messageSlice';
+import { fetchConversations, fetchUnreadCount , setSocketConnected, addMessage } from '../../store/slices/messageSlice';
 import socketService from '../../services/socketService';
-import { setSocketConnected, addMessage } from '../../store/slices/messageSlice';
+
 
 const MessagesScreen = ({ navigation }) => {
   const theme = useTheme();

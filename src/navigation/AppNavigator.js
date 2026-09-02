@@ -8,8 +8,6 @@ import { getProfile } from '../store/slices/freelancerSlice';
 import socketService from '../services/socketService';
 import { setSocketConnected } from '../store/slices/messageSlice';
 
-const Stack = createStackNavigator();
-
 // Landing and Splash Screens
 import SplashScreen from '../screens/SplashScreen';
 import LandingScreen from '../screens/LandingScreen';
@@ -34,6 +32,8 @@ import AdminTabNavigator from './AdminTabNavigator';
 
 // Associate Screens
 import AssociateTabNavigator from './AssociateTabNavigator';
+
+const Stack = createStackNavigator();
 
 // Loading Screen
 const LoadingScreen = () => (
