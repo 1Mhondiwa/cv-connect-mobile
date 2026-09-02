@@ -11,7 +11,7 @@ class VideoCallService {
   }
 
   // Initialize video call
-  async initializeVideoCall(interviewId, isHost = false) {
+  async initializeVideoCall(interviewId, _isHost = false) {
     try {
       
       // Request permissions

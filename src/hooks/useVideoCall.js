@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 
-export const useVideoCall = (interviewId, isHost = false) => {
+export const useVideoCall = (interviewId, _isHost = false) => {
   // Video call state
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
