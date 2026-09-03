@@ -80,11 +80,11 @@ export const logout = createAsyncThunk(
       // Reset admin state
       dispatch(resetAdminState());
       return null;
-    } catch (error) {
+    } catch (_error) {
       // Even if there's an error, try to remove the token
       try {
         await tokenService.removeToken();
-      } catch (e) {}
+      } catch (_e) {}
       return rejectWithValue('Logout failed');
     }
   }

@@ -205,7 +205,7 @@ const messageSlice = createSlice({
         }
       })
       // Create Conversation
-      .addCase(createConversation.fulfilled, (state, action) => {
+      .addCase(createConversation.fulfilled, (state, _action) => {
         // Refresh conversations list
         // This will be handled by the component calling fetchConversations
       })

@@ -1,5 +1,4 @@
 import { io } from 'socket.io-client';
-import webrtcService from './webrtcService';
 
 class SignalingService {
   constructor() {

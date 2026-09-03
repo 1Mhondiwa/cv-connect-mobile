@@ -254,7 +254,7 @@ const interviewSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(submitFeedback.fulfilled, (state, action) => {
+      .addCase(submitFeedback.fulfilled, (state, _action) => {
         state.isLoading = false;
         state.success = 'Feedback submitted successfully';
         
@@ -320,7 +320,7 @@ const interviewSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(endVideoCall.fulfilled, (state, action) => {
+      .addCase(endVideoCall.fulfilled, (state, _action) => {
         state.isLoading = false;
         state.videoCallActive = false;
         state.currentVideoCall = null;

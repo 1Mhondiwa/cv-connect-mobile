@@ -59,7 +59,7 @@ class ExpoWebRTCService {
   }
 
   // Set remote description (simplified)
-  async setRemoteDescription(sessionDescription) {
+  async setRemoteDescription(_sessionDescription) {
     try {
       // Simulate connection after a delay
       setTimeout(() => {
@@ -72,7 +72,7 @@ class ExpoWebRTCService {
   }
 
   // Add ICE candidate (simplified)
-  async addIceCandidate(candidate) {
+  async addIceCandidate(_candidate) {
   }
 
   // Switch camera (simplified)
@@ -100,7 +100,7 @@ class ExpoWebRTCService {
   }
 
   // Send signaling message (simplified)
-  sendSignalingMessage(message) {
+  sendSignalingMessage(_message) {
   }
 
   // Set signaling channel (simplified)

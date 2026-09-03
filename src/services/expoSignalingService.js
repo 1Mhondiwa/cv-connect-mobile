@@ -17,7 +17,7 @@ class ExpoSignalingService {
   }
 
   // Connect to signaling server (simplified)
-  connect(serverUrl = 'http://10.0.0.10:5000') {
+  connect(_serverUrl = 'http://10.0.0.10:5000') {
     try {
       this.isConnected = true;
       
@@ -52,7 +52,7 @@ class ExpoSignalingService {
   }
 
   // Send offer (simplified)
-  sendOffer(offer) {
+  sendOffer(_offer) {
     if (this.isConnected && this.roomId) {
       
       // Simulate receiving answer after a delay
@@ -68,11 +68,11 @@ class ExpoSignalingService {
   }
 
   // Send answer (simplified)
-  sendAnswer(answer) {
+  sendAnswer(_answer) {
   }
 
   // Send ICE candidate (simplified)
-  sendIceCandidate(candidate) {
+  sendIceCandidate(_candidate) {
   }
 
   // Set callbacks

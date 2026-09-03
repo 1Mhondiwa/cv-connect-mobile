@@ -14,7 +14,7 @@ export const fetchNotifications = createAsyncThunk(
 export const markNotificationAsRead = createAsyncThunk(
   'notifications/markAsRead',
   async (notificationId) => {
-    const response = await interviewAPI.markNotificationAsRead(notificationId);
+    const _response = await interviewAPI.markNotificationAsRead(notificationId);
     return notificationId;
   }
 );
