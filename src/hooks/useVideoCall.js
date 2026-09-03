@@ -48,16 +48,9 @@ export const useVideoCall = (interviewId, _isHost = false) => {
   };
 
   // Request permissions
-  const requestPermissions = async () => {
-    try {
-      // In a real implementation, you would request camera and microphone permissions
-      // For now, we'll simulate permission granted
-      return true;
-    } catch (error) {
-      console.error('❌ Permission request failed:', error);
-      return false;
-    }
-  };
+  // Simulated — a real implementation would request camera and microphone
+  // permissions here
+  const requestPermissions = async () => true;
 
   // Toggle mute
   const toggleMute = () => {

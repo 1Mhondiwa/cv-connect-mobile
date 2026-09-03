@@ -45,14 +45,9 @@ const VideoCallModal = ({
   // Refs
   const callDurationInterval = useRef(null);
 
-  const requestPermissions = async () => {
-    try {
-      return true;
-    } catch (error) {
-      console.error('❌ Permission request failed:', error);
-      return false;
-    }
-  };
+  // Simulated permissions — a real implementation would request camera
+  // and microphone permissions here
+  const requestPermissions = async () => true;
 
   const cleanup = () => {
     if (callDurationInterval.current) {

@@ -40,35 +40,20 @@ class ExpoWebRTCService {
 
   // Create offer (simplified)
   async createOffer() {
-    try {
-      return { type: 'offer', sdp: 'mock-offer' };
-    } catch (error) {
-      console.error('❌ Error creating offer:', error);
-      throw error;
-    }
+    return { type: 'offer', sdp: 'mock-offer' };
   }
 
   // Create answer (simplified)
   async createAnswer() {
-    try {
-      return { type: 'answer', sdp: 'mock-answer' };
-    } catch (error) {
-      console.error('❌ Error creating answer:', error);
-      throw error;
-    }
+    return { type: 'answer', sdp: 'mock-answer' };
   }
 
   // Set remote description (simplified)
   async setRemoteDescription(_sessionDescription) {
-    try {
       // Simulate connection after a delay
       setTimeout(() => {
         this.isConnected = true;
       }, 2000);
-    } catch (error) {
-      console.error('❌ Error setting remote description:', error);
-      throw error;
-    }
   }
 
   // Add ICE candidate (simplified)
@@ -81,22 +66,12 @@ class ExpoWebRTCService {
 
   // Toggle audio (simplified)
   toggleAudio() {
-    try {
-      return true;
-    } catch (error) {
-      console.error('❌ Error toggling audio:', error);
-      return false;
-    }
+    return true;
   }
 
   // Toggle video (simplified)
   toggleVideo() {
-    try {
-      return true;
-    } catch (error) {
-      console.error('❌ Error toggling video:', error);
-      return false;
-    }
+    return true;
   }
 
   // Send signaling message (simplified)

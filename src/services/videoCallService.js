@@ -40,15 +40,9 @@ class VideoCallService {
   }
 
   // Request camera and microphone permissions
+  // Simulated — a real implementation would request camera and microphone permissions
   async requestPermissions() {
-    try {
-      // In a real implementation, you would request camera and microphone permissions
-      // For now, we'll simulate permission granted
-      return true;
-    } catch (error) {
-      console.error('❌ Permission request failed:', error);
-      return false;
-    }
+    return true;
   }
 
   // Get user media (camera and microphone)
@@ -104,14 +98,9 @@ class VideoCallService {
   }
 
   // Toggle screen share
+  // Simulated — a real implementation would use getDisplayMedia
   async toggleScreenShare() {
-    try {
-      // In a real implementation, you would use getDisplayMedia API
-      return true;
-    } catch (error) {
-      console.error('❌ Error toggling screen share:', error);
-      return false;
-    }
+    return true;
   }
 
   // End call
