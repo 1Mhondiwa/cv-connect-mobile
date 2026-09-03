@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, ToastAndroid, ActivityIndicator } from 'react-native';
-import { Text, Card, Button, IconButton, Surface, useTheme, Avatar, Divider, Chip } from 'react-native-paper';
+import { Text, Card, Button, IconButton, Surface, Avatar, Divider, Chip } from 'react-native-paper';
 import { useSelector, useDispatch } from 'react-redux';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { updateProfile, getProfile, updateAvailability } from '../../store/slices/freelancerSlice';
+import { updateProfile, getProfile } from '../../store/slices/freelancerSlice';
 import CountryCodePicker from '../../components/CountryCodePicker';
 import CVViewer from '../../components/CVViewer';
 import { profileAPI } from '../../services/api';
 import { showToast } from '../../utils/toast';
 import config from '../../config/config';
 
-const ProfileScreen = ({ navigation }) => {
-  const theme = useTheme();
+const ProfileScreen = ({ navigation: _navigation }) => {
   const dispatch = useDispatch();
   const { profile } = useSelector((state) => state.freelancer);
   const { user } = useSelector((state) => state.auth);
@@ -281,7 +280,7 @@ const ProfileScreen = ({ navigation }) => {
             return;
           }
           
-          const result = await dispatch(updateProfile(cleanData)).unwrap();
+          const _result = await dispatch(updateProfile(cleanData)).unwrap();
         } catch (error) {
           // Handle the new error format from the thunk
           let msg = 'Failed to update profile';
@@ -590,51 +589,6 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const editEducation = async (index, field, value) => {
-    const oldEducation = education[index];
-    
-    try {
-      // Update local state immediately for UI feedback
-      setEducation(prev => prev.map((edu, i) => 
-        i === index ? { ...edu, [field]: value } : edu
-      ));
-      
-      // If it's a backend education (has ID), update in backend
-      if (oldEducation.id) {
-        const updatedEducationData = {
-          ...oldEducation,
-          [field]: value
-        };
-        await profileAPI.updateEducation(oldEducation.id, updatedEducationData);
-      }
-      
-      // Update CV parsed data to sync with backend
-      try {
-        const updatedEducation = education.map((edu, i) => 
-          i === index ? { ...edu, [field]: value } : edu
-        );
-        await profileAPI.updateCVParsedData({
-          education: updatedEducation
-        });
-      } catch (cvError) {
-        console.warn('Failed to update CV parsed data:', cvError);
-      }
-      
-      // Show success message
-      Alert.alert('Success', `Education "${oldEducation.degree}" updated successfully!`);
-      
-      // Refresh profile data
-      dispatch(getProfile());
-    } catch (error) {
-      console.error('Error updating education:', error);
-      // Revert local state if backend save failed
-      setEducation(prev => prev.map((edu, i) => 
-        i === index ? oldEducation : edu
-      ));
-      Alert.alert('Error', 'Failed to update education. Please try again.');
-    }
-  };
-
   // Work experience management functions
   const addWorkExperience = async () => {
     if (newWorkExperience.title.trim() && newWorkExperience.company.trim()) {
@@ -778,51 +732,6 @@ const ProfileScreen = ({ navigation }) => {
       dispatch(getProfile());
     } catch (error) {
       console.error('Error updating work experience:', error);
-      Alert.alert('Error', 'Failed to update work experience. Please try again.');
-    }
-  };
-
-  const editWorkExperience = async (index, field, value) => {
-    const oldWorkExp = workExperience[index];
-    
-    try {
-      // Update local state immediately for UI feedback
-      setWorkExperience(prev => prev.map((exp, i) => 
-        i === index ? { ...exp, [field]: value } : exp
-      ));
-      
-      // If it's a backend work experience (has ID), update in backend
-      if (oldWorkExp.id) {
-        const updatedWorkData = {
-          ...oldWorkExp,
-          [field]: value
-        };
-        await profileAPI.updateWorkExperience(oldWorkExp.id, updatedWorkData);
-      }
-      
-      // Update CV parsed data to sync with backend
-      try {
-        const updatedWorkExp = workExperience.map((exp, i) => 
-          i === index ? { ...exp, [field]: value } : exp
-        );
-        await profileAPI.updateCVParsedData({
-          work_experience: updatedWorkExp
-        });
-      } catch (cvError) {
-        console.warn('Failed to update CV parsed data:', cvError);
-      }
-      
-      // Show success message
-      Alert.alert('Success', `Work experience "${oldWorkExp.title}" updated successfully!`);
-      
-      // Refresh profile data
-      dispatch(getProfile());
-    } catch (error) {
-      console.error('Error updating work experience:', error);
-      // Revert local state if backend save failed
-      setWorkExperience(prev => prev.map((exp, i) => 
-        i === index ? oldWorkExp : exp
-      ));
       Alert.alert('Error', 'Failed to update work experience. Please try again.');
     }
   };

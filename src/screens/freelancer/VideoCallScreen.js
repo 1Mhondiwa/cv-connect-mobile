@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   StatusBar,
   Alert,
   BackHandler,
@@ -33,20 +32,13 @@ import signalingService from '../../services/expoSignalingService';
 // Responsive utilities
 import {
   scale,
-  verticalScale,
   fontSize,
   spacing,
   borderRadius,
-  responsive,
-  isTablet,
-  isSmallDevice,
-  isLargeDevice,
 } from '../../utils/responsive';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 const VideoCallScreen = ({ route, navigation }) => {
-  const { interviewId, interviewTitle, isHost } = route.params || {};
+  const { interviewId, isHost } = route.params || {};
   
   // Video call state
   const [isConnected, setIsConnected] = useState(false);
@@ -65,9 +57,11 @@ const VideoCallScreen = ({ route, navigation }) => {
   const [cameraType, setCameraType] = useState('front');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [localStream, setLocalStream] = useState(null);
+  // Write-only state: values drive nothing in the UI yet, but the setters
+  // are part of the connection lifecycle (assigned on connect/cleanup)
+  const [, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [connectionState, setConnectionState] = useState('disconnected');
+  const [, setConnectionState] = useState('disconnected');
 
   // Refs
   const cameraRef = useRef(null);
@@ -280,7 +274,7 @@ const VideoCallScreen = ({ route, navigation }) => {
   };
 
   // Handle user joined
-  const handleUserJoined = (data) => {
+  const handleUserJoined = (_data) => {
     setWaitingMessage('User joined, establishing connection...');
     
     // Simulate connection establishment
@@ -299,7 +293,7 @@ const VideoCallScreen = ({ route, navigation }) => {
   };
 
   // Handle user left
-  const handleUserLeft = (data) => {
+  const handleUserLeft = (_data) => {
     setWaitingMessage('User disconnected');
     setIsConnected(false);
   };
@@ -525,17 +519,11 @@ const VideoCallScreen = ({ route, navigation }) => {
                </View>
              </TouchableOpacity>
 
-             {/* Local video (yourself) */}
-             <TouchableOpacity 
-               style={isFullscreen ? styles.localVideoSmall : styles.localVideoContainer}
-               onPress={() => {
-                  if (isFullscreen) {
-                    setIsFullscreen(false);
-                  } else {
-                    setIsFullscreen(true);
-                  }
-                }}
-               activeOpacity={0.8}
+            {/* Local video (yourself) */}
+            <TouchableOpacity 
+              style={isFullscreen ? styles.localVideoSmall : styles.localVideoContainer}
+              onPress={toggleFullscreen}
+              activeOpacity={0.8}
              >
                {isVideoOn && permissionStatus.camera === 'granted' ? (
                  <View style={styles.localVideo}>
